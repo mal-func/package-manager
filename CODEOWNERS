@@ -1,0 +1,7 @@
+# Default owner for everything not matched below.
+* @WorkGaurav1
+
+# Deployment/infrastructure changes warrant an extra look regardless
+# of who else touches a PR.
+/deployment/ @WorkGaurav1
+/.github/ @WorkGaurav1

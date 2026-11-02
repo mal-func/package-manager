@@ -1,0 +1,58 @@
+# Security updates only — no scheduled version-bump PRs.
+#
+# Policy (see docs/standards/security.md#dependency-updates): a dependency
+# is upgraded only when a published advisory affects the version we ship.
+# Routine and major-version upgrades are done by hand, deliberately, as
+# their own reviewed change — not as a weekly stream of bot PRs.
+#
+# How this file gets that behaviour:
+# - `open-pull-requests-limit: 0` switches off version updates for an
+#   ecosystem. Security updates are not affected by it: they are driven
+#   by Dependabot alerts (repo Settings -> Code security), not by
+#   `schedule`, and open as soon as an advisory matches.
+# - The `security` group puts every fix for one directory into a single
+#   PR (and a single branch), instead of one PR per vulnerable package.
+# - Docker is deliberately absent: Dependabot security updates do not
+#   cover Docker images, so an entry here would only ever produce
+#   version bumps (e.g. the Node 22 -> 26 PRs that ignored our pin).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /front-end
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /back-end
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /deployment
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ["*"]

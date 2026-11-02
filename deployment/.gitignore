@@ -1,0 +1,20 @@
+node_modules/
+
+# Real secrets/config — env/production.env.example documents what's needed.
+# The trailing * matters: "compose/.env" alone only matches a file
+# literally named ".env", not ".env.production" or ".env.ci".
+compose/.env*
+.env
+
+# Playwright artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+
+# Per-server deploy state (which versions are live) — not shared
+# config, genuinely local to whichever machine ran deploy.sh.
+compose/current-versions.env
+compose/previous-versions.env
+compose/pending-versions.env
+
+.DS_Store

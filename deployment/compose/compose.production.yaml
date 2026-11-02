@@ -1,0 +1,102 @@
+# Production stack — pulls pinned images from a registry. Never builds
+# from source (that already happened, once, in CI) and never depends on
+# `latest`: FRONTEND_VERSION/BACKEND_VERSION must be set explicitly to a
+# real tag (a commit SHA, ideally) so the exact running version is
+# always known and a rollback is just "redeploy the previous value of
+# these two variables."
+#
+# FRONTEND_IMAGE/BACKEND_IMAGE name the image repositories (no tag),
+# e.g. ghcr.io/your-org/your-repo-backend — whatever your CI publishes
+# (the root .github/workflows/ci.yml prints them). Required, with no
+# default, so a clone can never silently pull someone else's images.
+#
+# Run: docker compose -f compose/compose.production.yaml up -d
+name: cdis
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cdis
+      MYSQL_USER: cdis
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # No `ports:` — MySQL is reachable only from other containers on
+    # this network, never from the host or the internet.
+
+  backend:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required — e.g. ghcr.io/your-org/your-repo-backend}:${BACKEND_VERSION:?BACKEND_VERSION is required — e.g. a commit SHA, never left as :latest}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:?PUBLIC_ORIGIN is required}
+      DATABASE_URL: mysql://cdis:${DB_PASSWORD}@mysql:3306/cdis?allowPublicKeyRetrieval=true
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN_DAYS: 7
+      BCRYPT_SALT_ROUNDS: 12
+      ACCOUNT_LOCKOUT_MAX_ATTEMPTS: 5
+      ACCOUNT_LOCKOUT_DURATION_MINUTES: 15
+      # Exactly one hop: the Apache reverse-proxy container below.
+      TRUST_PROXY_HOPS: 1
+      # Closed unless you opt in — see env/production.env.example.
+      ALLOW_SELF_REGISTRATION: ${ALLOW_SELF_REGISTRATION:-false}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # No `ports:` — only the reverse proxy talks to this, over the
+    # internal Docker network (service name `backend`).
+
+  # One-off job: apply migrations + seed against the *new* image before
+  # it serves traffic. Never started by `up` (the `tools` profile) —
+  # scripts/deploy.sh runs it explicitly and aborts the deploy, with the
+  # old version still running, if it fails.
+  migrate:
+    image: ${BACKEND_IMAGE:?BACKEND_IMAGE is required — e.g. ghcr.io/your-org/your-repo-backend}:${BACKEND_VERSION:?BACKEND_VERSION is required — e.g. a commit SHA, never left as :latest}
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: mysql://cdis:${DB_PASSWORD}@mysql:3306/cdis?allowPublicKeyRetrieval=true
+      BCRYPT_SALT_ROUNDS: 12
+      # Optional initial admin (see env/production.env.example). Both
+      # unset = no admin is created. Only this one-off job ever sees
+      # these — the long-running backend service never does.
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-}
+    command: ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?FRONTEND_IMAGE is required — e.g. ghcr.io/your-org/your-repo-frontend}:${FRONTEND_VERSION:?FRONTEND_VERSION is required — e.g. a commit SHA, never left as :latest}
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  reverse-proxy:
+    image: httpd:2.4-alpine
+    restart: unless-stopped
+    volumes:
+      - ../reverse-proxy/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+    ports:
+      # Host port overridable for servers where something else already
+      # owns :80 (e.g. a host-level proxy). Keep 80 if you'll use
+      # setup-https.sh — Let's Encrypt's HTTP challenge needs it.
+      - "${HTTP_PORT:-80}:80"
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  mysql-data:

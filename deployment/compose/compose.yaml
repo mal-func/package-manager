@@ -1,0 +1,110 @@
+# Local verification stack — builds images from source rather than
+# pulling from a registry. Deliberately NOT the production model (see
+# compose.production.yaml): it exists so the reverse-proxy routing and
+# multi-container wiring can be verified end-to-end (scripts/e2e-up.sh,
+# and CI's E2E stage) without a registry or a real server.
+#
+# Build contexts default to this monorepo's own back-end/ and front-end/.
+# In the standalone cdis-deployment export, set BACKEND_BUILD_CONTEXT /
+# FRONTEND_BUILD_CONTEXT in compose/.env to your sibling clones instead
+# (e.g. ../../cdis-backend).
+#
+# Run from deployment/: docker compose -f compose/compose.yaml up -d
+name: cdis
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cdis
+      MYSQL_USER: cdis
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Deliberately no `ports:` — MySQL is only reachable from other
+    # containers on this network, never from the host or the internet.
+
+  backend:
+    build:
+      context: ${BACKEND_BUILD_CONTEXT:-../../back-end}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      CORS_ORIGIN: ${PUBLIC_ORIGIN}
+      DATABASE_URL: mysql://cdis:${DB_PASSWORD}@mysql:3306/cdis?allowPublicKeyRetrieval=true
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      REFRESH_TOKEN_EXPIRES_IN_DAYS: 7
+      BCRYPT_SALT_ROUNDS: 12
+      ACCOUNT_LOCKOUT_MAX_ATTEMPTS: 5
+      ACCOUNT_LOCKOUT_DURATION_MINUTES: 15
+      # Exactly one hop: the Apache reverse-proxy container below.
+      TRUST_PROXY_HOPS: 1
+      # On: the E2E suite registers its own throwaway users.
+      ALLOW_SELF_REGISTRATION: "true"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # No `ports:` here either — only the reverse proxy talks to this,
+    # over the internal Docker network (service name `backend`).
+
+  # One-off job: apply migrations + seed. Same image as `backend`, but
+  # never started by `up` (the `tools` profile) — scripts/e2e-up.sh runs
+  # it explicitly: docker compose -f compose.yaml run --rm migrate
+  migrate:
+    build:
+      context: ${BACKEND_BUILD_CONTEXT:-../../back-end}
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: mysql://cdis:${DB_PASSWORD}@mysql:3306/cdis?allowPublicKeyRetrieval=true
+      BCRYPT_SALT_ROUNDS: 12
+      # Initial admin. This local stack defaults to the E2E suite's admin
+      # (e2e/helpers.ts) so the suite works from a fresh clone; the
+      # password is public, which is why the proxy below only listens
+      # on 127.0.0.1. Only this one-off job ever sees these — the
+      # long-running backend service never does.
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-e2e-admin@example.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-e2e-admin-password}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-}
+    command: ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed"]
+    restart: "no"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ${FRONTEND_BUILD_CONTEXT:-../../front-end}
+      args:
+        VITE_APP_NAME: CDIS
+        VITE_APP_ENV: production
+        # Relative path — resolves against whatever origin the browser
+        # actually loaded the page from, so the exact public URL never
+        # needs to be known at image-build time.
+        VITE_API_BASE_URL: /api/v1
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  reverse-proxy:
+    image: httpd:2.4-alpine
+    restart: unless-stopped
+    volumes:
+      - ../reverse-proxy/apache/httpd.conf:/usr/local/apache2/conf/httpd.conf:ro
+    ports:
+      # Loopback only: this stack has a well-known seeded admin.
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  mysql-data:

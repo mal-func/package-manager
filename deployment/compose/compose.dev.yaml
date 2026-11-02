@@ -1,0 +1,43 @@
+# Local development database — MySQL only, for running back-end/ with
+# `npm run dev` and its integration tests directly on the host.
+#
+# Not the containerized app stack (that's compose.yaml, which publishes
+# no database port on purpose). Credentials are fixed, dev-only values
+# matching back-end/.env.example and vitest.integration.config.ts — no
+# .env needed, nothing here is a secret.
+#
+# Run from the repo root:
+#   docker compose -f deployment/compose/compose.dev.yaml up -d
+#
+# Creates two databases on first start: `cdis` (dev) and `cdis_test`
+# (integration tests — see mysql-init/). To start over from empty:
+#   docker compose -f deployment/compose/compose.dev.yaml down -v
+name: cdis-dev
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cdis
+      MYSQL_USER: cdis
+      MYSQL_PASSWORD: cdis_dev_password
+      MYSQL_ROOT_PASSWORD: cdis_root_dev_password
+    ports:
+      # 3308, not 3306, so it doesn't collide with a MySQL already
+      # installed on the host.
+      - "127.0.0.1:3308:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # 127.0.0.1 (TCP), not localhost (Unix socket): while mysql-init/
+      # runs, the image's temporary server answers on the socket but has
+      # networking off, so a socket ping reports healthy too early.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-pcdis_root_dev_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql-data:
