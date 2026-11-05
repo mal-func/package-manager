@@ -1,0 +1,87 @@
+name: Deploy
+
+# Continuous deployment for this monorepo: once CI (including its
+# `publish` job) succeeds on main, deploy that commit's two images —
+# both built from the same SHA — with deployment/scripts/deploy.sh.
+#
+# Runs on a self-hosted runner registered on the production server
+# itself: no SSH key in GitHub secrets, no inbound SSH from GitHub's IP
+# ranges. See deployment/README.md → "Automated deploys (CD)" for the
+# one-time setup.
+#
+# Off by default: nothing runs until the repository variable
+# DEPLOY_ENABLED is set to "true" (Settings → Secrets and variables →
+# Actions → Variables). Without that gate, a job waiting for a
+# self-hosted runner that doesn't exist yet would sit queued on every
+# push to main.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      frontend_version:
+        description: "Frontend image tag/SHA to deploy (blank = keep what's live)"
+        required: false
+      backend_version:
+        description: "Backend image tag/SHA to deploy (blank = keep what's live)"
+        required: false
+
+# Never two deploys on the server at once; a newer one waits rather
+# than cancelling a deploy mid-migration.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'))
+    runs-on: self-hosted
+
+    steps:
+      # clean: false — deployment/compose/.env.production, .env.https and
+      # the *-versions.env files are gitignored server state that must
+      # survive across runs on this persistent runner.
+      - uses: actions/checkout@v5
+        with:
+          clean: false
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Resolve versions
+        id: versions
+        working-directory: deployment/compose
+        env:
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_FRONTEND: ${{ github.event.inputs.frontend_version }}
+          INPUT_BACKEND: ${{ github.event.inputs.backend_version }}
+        run: |
+          if [ -n "$RUN_SHA" ]; then
+            FRONTEND_VERSION="$RUN_SHA"
+            BACKEND_VERSION="$RUN_SHA"
+          else
+            FRONTEND_VERSION="$INPUT_FRONTEND"
+            BACKEND_VERSION="$INPUT_BACKEND"
+            # A blank input keeps whatever is live on that side.
+            if [ -z "$FRONTEND_VERSION" ] && [ -f current-versions.env ]; then
+              FRONTEND_VERSION="$(grep '^FRONTEND_VERSION=' current-versions.env | cut -d= -f2)"
+            fi
+            if [ -z "$BACKEND_VERSION" ] && [ -f current-versions.env ]; then
+              BACKEND_VERSION="$(grep '^BACKEND_VERSION=' current-versions.env | cut -d= -f2)"
+            fi
+          fi
+
+          if [ -z "$FRONTEND_VERSION" ] || [ -z "$BACKEND_VERSION" ]; then
+            echo "::error::Missing a version and no current-versions.env to fall back to — give both on the first manual run."
+            exit 1
+          fi
+
+          echo "frontend=$FRONTEND_VERSION" >> "$GITHUB_OUTPUT"
+          echo "backend=$BACKEND_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        working-directory: deployment
+        run: ./scripts/deploy.sh "${{ steps.versions.outputs.frontend }}" "${{ steps.versions.outputs.backend }}"
