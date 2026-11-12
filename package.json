@@ -8,7 +8,9 @@
     "cdis": "./bin/cdis.js"
   },
   "scripts": {
-    "start": "node bin/cdis.js"
+    "start": "node bin/cdis.js",
+    "test": "node --test tests/template/*.test.js",
+    "test:watch": "node --test --watch tests/template/*.test.js"
   },
   "keywords": [
     "cdis",
