@@ -2,6 +2,33 @@ import AdmZip from "adm-zip";
 import fs from "fs";
 import path from "path";
 
+export function resolveArchiveEntryPath(entryName, rootDirectory, destinationRoot) {
+    const archivePath = entryName.replace(/\\/g, "/");
+    if (archivePath.startsWith("/") ||
+        archivePath.split("/").some(segment => segment === "..")) {
+        throw new Error(`Unsafe path in template archive: '${entryName}'.`);
+    }
+
+    if (archivePath === `${rootDirectory}/`) return null;
+    if (!archivePath.startsWith(`${rootDirectory}/`)) {
+        throw new Error(`Unexpected path in template archive: '${entryName}'.`);
+    }
+
+    const relativePath = archivePath.substring(rootDirectory.length + 1);
+    if (!relativePath) return null;
+    const segments = relativePath.split("/");
+    if (segments.some(segment => segment === "" || segment === "." || segment === "..")) {
+        throw new Error(`Unsafe path in template archive: '${entryName}'.`);
+    }
+
+    const destination = path.resolve(destinationRoot, ...segments);
+    if (destination !== destinationRoot &&
+        !destination.startsWith(destinationRoot + path.sep)) {
+        throw new Error(`Unsafe path in template archive: '${entryName}'.`);
+    }
+    return destination;
+}
+
 export function extractTemplate(zipPath, destination) {
     console.log("Extracting template...");
     const zip = new AdmZip(zipPath);
@@ -17,20 +44,8 @@ export function extractTemplate(zipPath, destination) {
 
     const destinationRoot = path.resolve(destination);
     for (const entry of entries) {
-        const archivePath = entry.entryName.replace(/\\/g, "/");
-        const relativePath = archivePath.substring(rootDirectory.length + 1);
-        if (!relativePath) continue;
-
-        const segments = relativePath.split("/");
-        if (archivePath.startsWith("/") || segments.some(segment => segment === "..")) {
-            throw new Error(`Unsafe path in template archive: '${entry.entryName}'.`);
-        }
-
-        const targetPath = path.resolve(destinationRoot, ...segments);
-        if (targetPath !== destinationRoot &&
-            !targetPath.startsWith(destinationRoot + path.sep)) {
-            throw new Error(`Unsafe path in template archive: '${entry.entryName}'.`);
-        }
+        const targetPath = resolveArchiveEntryPath(entry.entryName, rootDirectory, destinationRoot);
+        if (!targetPath) continue;
 
         if (entry.isDirectory) {
             fs.mkdirSync(targetPath, { recursive: true });
