@@ -9,7 +9,7 @@ export function extractTemplate(zipPath, destination) {
     if (entries.length === 0) throw new Error("Template archive is empty.");
 
     const firstEntry = entries.find(entry => entry.entryName);
-    const firstPath = firstEntry.entryName.replace(/\\\\/g, "/");
+    const firstPath = firstEntry.entryName.replace(/\\/g, "/");
     const rootDirectory = firstPath.split("/")[0];
     if (!rootDirectory || rootDirectory === "." || rootDirectory === "..") {
         throw new Error("Template archive has an invalid root directory.");
@@ -17,7 +17,7 @@ export function extractTemplate(zipPath, destination) {
 
     const destinationRoot = path.resolve(destination);
     for (const entry of entries) {
-        const archivePath = entry.entryName.replace(/\\\\/g, "/");
+        const archivePath = entry.entryName.replace(/\\/g, "/");
         const relativePath = archivePath.substring(rootDirectory.length + 1);
         if (!relativePath) continue;
 
