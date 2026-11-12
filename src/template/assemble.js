@@ -25,7 +25,31 @@ function copyDirectory(sourceRoot, relativeSource, destination, excluded) {
     });
 }
 
-export function assembleTemplate(templateDirectory, destination, manifest, selection) {
+function writeProjectReadme(destination, manifest, selection, projectName) {
+    const frontendReadme = `${selection.frontend.path}/README.md`;
+    const backendReadme = `${selection.backend.path}/README.md`;
+    const lines = [
+        `# ${projectName || "CDIS project"}`,
+        "",
+        "Generated with the CDIS project manager.",
+        "",
+        "## Selected stack",
+        `- Frontend: **${selection.frontend.id}** (` ${selection.frontend.path}/ `)`,
+        `- Backend: **${selection.backend.id}** (` ${selection.backend.path}/ `)`,
+        "",
+        "## Getting started",
+        `- Frontend guide: [${frontendReadme}](${frontendReadme})`,
+        `- Backend guide: [${backendReadme}](${backendReadme})`,
+        "- Deployment guide: [deployment/README.md](deployment/README.md)",
+        "- Project documentation: [docs/](docs/)",
+        "",
+        `Generated from ${manifest.name} (schema ${manifest.schemaVersion}).`,
+        ""
+    ];
+    fs.writeFileSync(path.join(destination, "README.md"), lines.join("\n"));
+}
+
+export function assembleTemplate(templateDirectory, destination, manifest, selection, projectName) {
     const excluded = manifest.files?.exclude ?? [];
     fs.mkdirSync(destination, { recursive: true });
 
@@ -42,10 +66,12 @@ export function assembleTemplate(templateDirectory, destination, manifest, selec
         return;
     }
 
+    // Preserve the manifest paths in the generated project. Deployment configs
+    // use these paths as their default Docker build contexts.
     copyDirectory(templateDirectory, selection.frontend.path,
-        path.join(destination, "front-end"), excluded);
+        path.join(destination, selection.frontend.path), excluded);
     copyDirectory(templateDirectory, selection.backend.path,
-        path.join(destination, "back-end"), excluded);
+        path.join(destination, selection.backend.path), excluded);
 
     for (const component of manifest.components ?? []) {
         if (component === "front-end" || component === "back-end") continue;
@@ -56,8 +82,5 @@ export function assembleTemplate(templateDirectory, destination, manifest, selec
         copyDirectory(templateDirectory, component, path.join(destination, component), excluded);
     }
 
-    const readme = path.join(templateDirectory, "README.md");
-    if (fs.existsSync(readme)) {
-        fs.copyFileSync(readme, path.join(destination, "README.md"));
-    }
+    writeProjectReadme(destination, manifest, selection, projectName);
 }
