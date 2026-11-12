@@ -34,8 +34,8 @@ function writeProjectReadme(destination, manifest, selection, projectName) {
         "Generated with the CDIS project manager.",
         "",
         "## Selected stack",
-        `- Frontend: **${selection.frontend.id}** (` ${selection.frontend.path}/ `)`,
-        `- Backend: **${selection.backend.id}** (` ${selection.backend.path}/ `)`,
+        `- Frontend: **${selection.frontend.id}** — ${selection.frontend.path}/`,
+        `- Backend: **${selection.backend.id}** — ${selection.backend.path}/`,
         "",
         "## Getting started",
         `- Frontend guide: [${frontendReadme}](${frontendReadme})`,
@@ -66,7 +66,7 @@ export function assembleTemplate(templateDirectory, destination, manifest, selec
         return;
     }
 
-    // Preserve the manifest paths in the generated project. Deployment configs
+    // Keep manifest paths in the generated project because deployment configs
     // use these paths as their default Docker build contexts.
     copyDirectory(templateDirectory, selection.frontend.path,
         path.join(destination, selection.frontend.path), excluded);
