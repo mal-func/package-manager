@@ -183,7 +183,7 @@ switch (command) {
                 throw new Error("The selected template version does not support frontend/backend selection.");
             }
 
-            assembleTemplate(templateDirectory, destination, manifest, selection);
+            assembleTemplate(templateDirectory, destination, manifest, selection, projectName);
 
             console.log(`Template: ${manifest.name}`);
             console.log(`Schema version: ${manifest.schemaVersion}`);
