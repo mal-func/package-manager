@@ -4,7 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import AdmZip from "adm-zip";
-import { extractTemplate } from "../../src/template/extract.js";
+import { extractTemplate, resolveArchiveEntryPath } from "../../src/template/extract.js";
 
 test("extracts files from a GitHub-style archive wrapper directory", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-extract-test-"));
@@ -22,18 +22,24 @@ test("extracts files from a GitHub-style archive wrapper directory", () => {
     }
 });
 
-test("rejects archive entries that escape the destination", () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-zip-slip-test-"));
-    try {
-        const archivePath = path.join(root, "malicious.zip");
-        const destination = path.join(root, "output");
-        const zip = new AdmZip();
-        zip.addFile("template-main/../../outside.txt", Buffer.from("bad"));
-        zip.writeZip(archivePath);
-        fs.mkdirSync(destination);
-        assert.throws(() => extractTemplate(archivePath, destination), /Unsafe path/);
-        assert.equal(fs.existsSync(path.join(root, "outside.txt")), false);
-    } finally {
-        fs.rmSync(root, { recursive: true, force: true });
-    }
+test("rejects parent-directory traversal in archive entry names", () => {
+    assert.throws(
+        () => resolveArchiveEntryPath(
+            "template-main/../../outside.txt",
+            "template-main",
+            path.resolve("/tmp/cdis-output")
+        ),
+        /Unsafe path/
+    );
+});
+
+test("rejects entries outside the GitHub archive wrapper directory", () => {
+    assert.throws(
+        () => resolveArchiveEntryPath(
+            "other-root/file.txt",
+            "template-main",
+            path.resolve("/tmp/cdis-output")
+        ),
+        /Unexpected path/
+    );
 });
