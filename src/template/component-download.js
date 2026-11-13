@@ -134,6 +134,7 @@ async function downloadOne(entry, snapshot, destinationRoot, request) {
                 timeout: 30000
             });
             fs.writeFileSync(destination, response.data);
+            if (entry.mode === "100755") fs.chmodSync(destination, 0o755);
             return;
         } catch (error) {
             lastError = error;
