@@ -38,7 +38,7 @@ cdis create portal --frontend vue --backend express
 cdis create portal --frontend react --backend fastapi --branch main
 cdis template versions
 cdis template info --branch main
-cdis template options --version v1.0.0
+cdis template options --branch main
 cdis create --help
 ```
 
