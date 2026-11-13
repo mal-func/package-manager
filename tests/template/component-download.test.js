@@ -41,6 +41,7 @@ test("selects only requested technologies, shared components and declared root f
         "front-end/vue/src/App.vue",
         "back-end/fastapi/app/main.py",
         "deployment/compose/compose.yaml",
+        "deployment/scripts/deploy.sh",
         "docs/START-HERE.md",
         ".gitignore"
     ]);
