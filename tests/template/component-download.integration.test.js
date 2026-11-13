@@ -42,7 +42,10 @@ test("downloads selected files from a real GitHub template snapshot", {
             temp,
             snapshot,
             smokeManifest,
-            selection
+            {
+                frontend: { path: "not-selected/frontend" },
+                backend: { path: "not-selected/backend" }
+            }
         );
         assert.equal(result.downloadedFiles, 1);
         assert.match(fs.readFileSync(path.join(temp, "README.md"), "utf8"), /CDIS Engineering Template/);
