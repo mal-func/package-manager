@@ -4,7 +4,7 @@ import axios from "axios";
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
-function validateTechnologyOptions(options, label) {
+function validateTechnologyOptions(options, label, expectedRoot) {
     if (!Array.isArray(options) || options.length === 0) {
         throw new Error(`Manifest '${label}' must be a non-empty array.`);
     }
@@ -24,7 +24,7 @@ function validateTechnologyOptions(options, label) {
         if (typeof option.path !== "string" || option.path.trim() === "") {
             throw new Error(`Technology '${option.id}' in '${label}' must define a path.`);
         }
-        const segments = option.path.split("/");
+        if (!option.path.startsWith(`${expectedRoot}/`)) {\n            throw new Error(`Technology '${option.id}' in '${label}' must be located under '${expectedRoot}/'.`);\n        }\n        const segments = option.path.split("/");
         if (option.path.startsWith("/") || option.path.includes("\\") ||
             segments.some(segment => segment === "" || segment === "." || segment === "..")) {
             throw new Error(`Technology '${option.id}' in '${label}' has an unsafe path: '${option.path}'.`);
@@ -80,8 +80,8 @@ export function validateManifest(manifest) {
     }
 
     if (hasFrontends) {
-        const frontendIds = validateTechnologyOptions(manifest.frontends, "frontends");
-        const backendIds = validateTechnologyOptions(manifest.backends, "backends");
+        const frontendIds = validateTechnologyOptions(manifest.frontends, "frontends", "front-end");
+        const backendIds = validateTechnologyOptions(manifest.backends, "backends", "back-end");
 
         if (manifest.compatibility !== undefined) {
             const compatibility = manifest.compatibility;
