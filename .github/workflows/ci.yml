@@ -18,5 +18,5 @@ jobs:
         run: npm ci
       - name: Run CLI tests
         run: npm test
-      - name: Check CLI entry point syntax
+      - name: Smoke test GitHub component download API\n        run: node --test tests/template/component-download.integration.test.js\n        env:\n          CDIS_LIVE_TESTS: 1\n      - name: Check CLI entry point syntax
         run: node --check bin/cdis.js
