@@ -27,6 +27,7 @@ const tree = [
     { path: "back-end/express/src/server.ts", type: "blob" },
     { path: "back-end/fastapi/app/main.py", type: "blob" },
     { path: "deployment/compose/compose.yaml", type: "blob" },
+    { path: "deployment/scripts/deploy.sh", type: "blob", mode: "100755" },
     { path: "docs/START-HERE.md", type: "blob" },
     { path: ".gitignore", type: "blob" },
     { path: "README.md", type: "blob" },
@@ -61,13 +62,14 @@ test("downloads selected files into their original template paths", async () => 
             }
         );
 
-        assert.equal(result.downloadedFiles, 5);
+        assert.equal(result.downloadedFiles, 6);
         assert.equal(fs.existsSync(path.join(root, "front-end/vue/src/App.vue")), true);
         assert.equal(fs.existsSync(path.join(root, "back-end/fastapi/app/main.py")), true);
         assert.equal(fs.existsSync(path.join(root, "front-end/react/src/App.tsx")), false);
         assert.equal(fs.existsSync(path.join(root, "back-end/express/src/server.ts")), false);
         assert.equal(fs.existsSync(path.join(root, ".gitignore")), true);
-        assert.equal(requested.length, 5);
+        assert.equal((fs.statSync(path.join(root, "deployment/scripts/deploy.sh")).mode & 0o777), 0o755);
+        assert.equal(requested.length, 6);
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
