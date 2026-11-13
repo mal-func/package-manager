@@ -55,7 +55,7 @@ test("requires a compatibility entry for every frontend", () => {
 test("rejects technology paths outside their category directory", () => {
     const value = structuredClone(valid);
     value.frontends[0].path = "back-end/react";
-    assert.throws(() => validateManifest(value), /must be located under 'front-end\\//);
+    assert.throws(() => validateManifest(value), error => error.message.includes("must be located under 'front-end/'"));
 });
 
 test("accepts safe root-level include paths", () => {
