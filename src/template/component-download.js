@@ -121,7 +121,7 @@ function safeDestination(root, repoPath) {
     return destination;
 }
 
-async function downloadOne(entry, snapshot, destinationRoot) {
+async function downloadOne(entry, snapshot, destinationRoot, request) {
     const url = `${RAW_BASE}/${snapshot.sha}/${encodeRepoPath(entry.path)}`;
     const destination = safeDestination(destinationRoot, entry.path);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -129,7 +129,7 @@ async function downloadOne(entry, snapshot, destinationRoot) {
     let lastError;
     for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-            const response = await axios.get(url, {
+            const response = await request(url, {
                 responseType: "arraybuffer",
                 timeout: 30000
             });
@@ -150,7 +150,7 @@ export async function downloadSelectedComponents(
     snapshot,
     manifest,
     selection,
-    { concurrency = 8, onProgress = () => {} } = {}
+    { concurrency = 8, onProgress = () => {}, request = axios.get } = {}
 ) {
     const files = selectTemplateFiles(snapshot.tree, manifest, selection);
     if (files.length === 0) {
@@ -167,7 +167,7 @@ export async function downloadSelectedComponents(
             nextIndex += 1;
             if (index >= files.length) return;
 
-            await downloadOne(files[index], snapshot, destination);
+            await downloadOne(files[index], snapshot, destination, request);
             completed += 1;
             onProgress(completed, files.length, files[index].path);
         }
