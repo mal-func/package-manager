@@ -1,132 +1,102 @@
 # CDIS CLI
 
-CDIS CLI generates projects from the [CDIS engineering template](https://github.com/mal-func/cdis-template-edit).
+CDIS CLI generates a CDIS project from the canonical [CDIS engineering template](https://github.com/mal-func/cdis-template-edit).
 
 ## Requirements
 
 - Node.js 22 or newer
 - npm
 
-## Install dependencies
+## Run locally
 
 ```bash
 npm ci
-```
-
-During development, run the CLI with:
-
-```bash
 node bin/cdis.js help
 ```
 
-## Create a project
+After installing the package globally, use the same commands with `cdis`.
 
-Use the template's manifest defaults:
+## Commands
 
-```bash
-node bin/cdis.js create my-project
-```
+| Command | Purpose |
+| --- | --- |
+| `cdis create <project-name>` | Generate a project using manifest defaults |
+| `cdis create <name> --frontend <id> --backend <id>` | Select frontend and backend implementations |
+| `cdis template versions` | List published template tags |
+| `cdis template info` | Show template metadata and technology options |
+| `cdis template options` | Show selectable frontend/backend IDs and declared compatibility |
+| `cdis version` | Show CLI version |
+| `cdis help` | Show command help |
 
-Choose implementations explicitly:
+Use `--version <tag>` to select a release or `--branch <branch>` to use a development branch. They are mutually exclusive.
 
-```bash
-node bin/cdis.js create my-project --frontend vue --backend express
-```
-
-Use a tagged template release:
-
-```bash
-node bin/cdis.js create my-project --version v1.0.0
-```
-
-Use a branch while developing the template and CLI together:
+Examples:
 
 ```bash
-node bin/cdis.js create my-project --frontend vue --backend fastapi --branch feat/vue-frontend-parity
+cdis create portal
+cdis create portal --frontend vue --backend express
+cdis create portal --frontend react --backend fastapi --branch main
+cdis template versions
+cdis template info --branch main
+cdis template options --version v1.0.0
+cdis create --help
 ```
 
-When technology IDs are omitted, the CLI uses the entries marked `"default": true` in the template manifest. The current template branch marks React and Express as defaults.
+When technology IDs are omitted, the CLI selects the options marked `"default": true` in the manifest.
 
 ## Template manifest contract
 
-The CLI reads the existing `cdis-template.json`. Technology options are declared as arrays:
+Technology choices are data, not hardcoded CLI values. The CLI reads `cdis-template.json` and resolves each selected ID to its directory path.
 
 ```json
 {
-  "schemaVersion": "1.0",
-  "name": "cdis-engineering-template",
   "frontends": [
-    {
-      "id": "react",
-      "path": "front-end/react",
-      "default": true
-    },
-    {
-      "id": "vue",
-      "path": "front-end/vue",
-      "default": false
-    }
+    { "id": "react", "path": "front-end/react", "default": true },
+    { "id": "vue", "path": "front-end/vue", "default": false }
   ],
   "backends": [
-    {
-      "id": "express",
-      "path": "back-end/express",
-      "default": true
-    },
-    {
-      "id": "fastapi",
-      "path": "back-end/fastapi",
-      "default": false
-    }
+    { "id": "express", "path": "back-end/express", "default": true },
+    { "id": "fastapi", "path": "back-end/fastapi", "default": false }
   ],
   "compatibility": {
     "react": ["express"],
     "vue": ["express"]
   },
-  "components": [
-    "front-end",
-    "back-end",
-    "deployment",
-    "docs"
-  ],
+  "components": ["front-end", "back-end", "deployment", "docs"],
   "files": {
+    "include": [".gitignore"],
     "exclude": [".git", "node_modules", "coverage", ".env", ".env.local"]
   }
 }
 ```
 
-Rules:
-
 - Every technology ID must be unique within its category.
-- Each category must declare exactly one default.
-- Paths are relative to the template archive root and cannot traverse outside it.
-- Compatibility maps a frontend ID to the backend IDs supported with it.
-- When compatibility is declared, every frontend must have a non-empty list containing only known backend IDs.
-- During the current schema transition, a manifest without `compatibility` is accepted with a CLI warning. Such a combination has not been compatibility-validated.
-- Older manifests without `frontends` and `backends` retain the legacy full-template extraction behavior.
+- Each technology category must declare exactly one default.
+- Frontend paths must live under `front-end/`; backend paths under `back-end/`.
+- `components` declares shared directories to include. The `front-end` and `back-end` entries are category containers; the CLI downloads only the selected implementation paths beneath them.
+- `files.include` declares individual root-level files or extra paths to include in addition to the selected implementations and shared directories.
+- `files.exclude` lists path segments to omit anywhere in the selected tree.
+- `compatibility` maps each frontend ID to backend IDs supported with it. Only combinations verified by template maintainers should be listed.
 
-The compatibility map should list only combinations the template maintainers have verified and intend to support.
+For a migration manifest without compatibility rules, the CLI currently allows the combination but warns that it has not been validated.
 
-## Project assembly
+## How component-level downloading works
 
-The CLI downloads the selected template tag or branch as a ZIP into a temporary staging directory. It then:
+For a modern manifest with frontend and backend options, the CLI does not download a repository ZIP.
 
-1. Extracts the archive into staging.
-2. Reads and validates `cdis-template.json`.
-3. Resolves the selected technology IDs to manifest paths.
-4. Copies only those frontend and backend directories.
-5. Copies the shared components listed in `components`.
-6. Writes a project README identifying the selected stack.
-7. Removes staging files.
+1. It resolves the selected branch or tag to an immutable Git commit SHA.
+2. It downloads the manifest and Git tree for that exact commit.
+3. It selects files beneath the chosen frontend path, chosen backend path, shared component paths, and paths declared in `files.include`.
+4. It removes files matching `files.exclude` and does not follow symbolic links.
+5. It downloads only those selected file contents from GitHub's raw-content endpoint, with bounded concurrency and retries.
+6. It writes each file into the same relative path in the generated project.
+7. It writes a project README describing the selected stack.
 
-The generated project retains paths such as `front-end/vue` and `back-end/express`, which are also used by the template's deployment configuration.
+Resolving the ref to a commit SHA ensures the manifest, file list and file contents all come from the same repository snapshot even if the branch moves during generation.
 
-## Template information
+The Git tree API returns paths and blob metadata; it does not return the contents of every file. The CLI therefore fetches only the selected file contents. This uses more HTTP requests than a ZIP download, but transfers fewer irrelevant files and avoids downloading alternative implementations.
 
-```bash
-node bin/cdis.js template versions
-node bin/cdis.js template info --version v1.0.0
-```
+Older manifests without technology option arrays retain a legacy ZIP fallback for backward compatibility.
 
 ## Tests
 
