@@ -22,5 +22,9 @@ jobs:
         run: node --test tests/template/component-download.integration.test.js
         env:
           CDIS_LIVE_TESTS: 1
+      - name: End-to-end project generation against GitHub
+        run: node --test tests/template/create-live.integration.test.js
+        env:
+          CDIS_FULL_LIVE_TESTS: 1
       - name: Check CLI entry point syntax
         run: node --check bin/cdis.js
