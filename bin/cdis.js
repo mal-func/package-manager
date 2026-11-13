@@ -168,7 +168,6 @@ async function createProject() {
     const backend = getOption("--backend");
 
     let stagingDirectory;
-    let destinationCreated = false;
 
     try {
         console.log(`\nPreparing CDIS project '${projectName}'...`);
@@ -199,7 +198,6 @@ async function createProject() {
                     }
                 }
             );
-            destinationCreated = true;
             writeProjectReadme(destination, manifest, selection, projectName);
             console.log(`Skipped ${result.skippedFiles} files outside the selected components.`);
         } else {
@@ -215,7 +213,6 @@ async function createProject() {
             extractTemplate(zipPath, extracted);
             const extractedManifest = readManifest(extracted);
             assembleTemplate(extracted, destination, extractedManifest, undefined, projectName);
-            destinationCreated = true;
         }
 
         console.log(`\nProject '${projectName}' created successfully!`);
