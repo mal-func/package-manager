@@ -28,7 +28,7 @@ After installing the package globally, use the same commands with `cdis`.
 | `cdis version` | Show CLI version |
 | `cdis help` | Show command help |
 
-Use `--version <tag>` to select a release or `--branch <branch>` to use a development branch. They are mutually exclusive.
+By default, generation uses the template repository's `main` branch so new users receive the merged manifest-driven template. Use `--version <tag>` for a pinned release or `--branch <branch>` for another development branch. These options are mutually exclusive.
 
 Examples:
 
