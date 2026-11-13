@@ -13,7 +13,7 @@ import { resolveTechnologySelection } from "../src/template/selection.js";
 import { assembleTemplate, writeProjectReadme } from "../src/template/assemble.js";
 
 const CLI_VERSION = "1.0.0";
-const DEFAULT_TEMPLATE_VERSION = "v1.0.0";
+const DEFAULT_TEMPLATE_REF = "main";\nconst DEFAULT_TEMPLATE_REF_TYPE = "heads";
 const args = process.argv.slice(2);
 const command = args[0];
 
@@ -77,7 +77,7 @@ Usage:
 Options:
   --frontend <id>       Frontend ID declared in cdis-template.json
   --backend <id>        Backend ID declared in cdis-template.json
-  --version <version>  Published template tag (default: ${DEFAULT_TEMPLATE_VERSION})
+  --version <version>  Published template tag (default: ${DEFAULT_TEMPLATE_REF})
   --branch <branch>    Git branch to use instead of a published tag
   --help                Show this help
 
@@ -133,7 +133,7 @@ function resolveRefOptions() {
     }
     return branch
         ? { ref: branch, refType: "heads" }
-        : { ref: version ?? DEFAULT_TEMPLATE_VERSION, refType: "tags" };
+        : version\n            ? { ref: version, refType: "tags" }\n            : { ref: DEFAULT_TEMPLATE_REF, refType: DEFAULT_TEMPLATE_REF_TYPE };
 }
 
 async function inspectTemplate(action) {
