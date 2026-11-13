@@ -13,7 +13,8 @@ import { resolveTechnologySelection } from "../src/template/selection.js";
 import { assembleTemplate, writeProjectReadme } from "../src/template/assemble.js";
 
 const CLI_VERSION = "1.0.0";
-const DEFAULT_TEMPLATE_REF = "main";\nconst DEFAULT_TEMPLATE_REF_TYPE = "heads";
+const DEFAULT_TEMPLATE_REF = "main";
+const DEFAULT_TEMPLATE_REF_TYPE = "heads";
 const args = process.argv.slice(2);
 const command = args[0];
 
@@ -133,7 +134,9 @@ function resolveRefOptions() {
     }
     return branch
         ? { ref: branch, refType: "heads" }
-        : version\n            ? { ref: version, refType: "tags" }\n            : { ref: DEFAULT_TEMPLATE_REF, refType: DEFAULT_TEMPLATE_REF_TYPE };
+        : version
+            ? { ref: version, refType: "tags" }
+            : { ref: DEFAULT_TEMPLATE_REF, refType: DEFAULT_TEMPLATE_REF_TYPE };
 }
 
 async function inspectTemplate(action) {
