@@ -51,3 +51,21 @@ test("requires a compatibility entry for every frontend", () => {
     delete value.compatibility.vue;
     assert.throws(() => validateManifest(value), /Compatibility for frontend 'vue'/);
 });
+
+test("rejects technology paths outside their category directory", () => {
+    const value = structuredClone(valid);
+    value.frontends[0].path = "back-end/react";
+    assert.throws(() => validateManifest(value), /must be located under 'front-end'/);
+});
+
+test("accepts safe root-level include paths", () => {
+    const value = structuredClone(valid);
+    value.files = { include: [".gitignore"], exclude: [".env", "node_modules"] };
+    assert.equal(validateManifest(value), value);
+});
+
+test("rejects unsafe explicitly included paths", () => {
+    const value = structuredClone(valid);
+    value.files = { include: ["../secrets.txt"] };
+    assert.throws(() => validateManifest(value), /files.include/);
+});
