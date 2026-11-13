@@ -45,8 +45,32 @@ export function validateManifest(manifest) {
         !manifest.name || !manifest.schemaVersion) {
         throw new Error("Invalid template manifest.");
     }
-    if (manifest.components !== undefined && !Array.isArray(manifest.components)) {
-        throw new Error("Manifest 'components' must be an array.");
+    if (manifest.components !== undefined &&
+        (!Array.isArray(manifest.components) ||
+         manifest.components.some(component => typeof component !== "string" || !component.trim()))) {
+        throw new Error("Manifest 'components' must be an array of non-empty paths.");
+    }
+    const safeRelativePath = value =>
+        typeof value === "string" && value.trim() !== "" &&
+        !value.startsWith("/") && !value.includes("\\\\") &&
+        value.split("/").every(segment => segment && segment !== "." && segment !== "..");
+
+    if (manifest.components?.some(component => !safeRelativePath(component))) {
+        throw new Error("Manifest 'components' contains an unsafe path.");
+    }
+    if (manifest.files !== undefined &&
+        (!manifest.files || typeof manifest.files !== "object" || Array.isArray(manifest.files))) {
+        throw new Error("Manifest 'files' must be an object.");
+    }
+    if (manifest.files?.include !== undefined &&
+        (!Array.isArray(manifest.files.include) ||
+         manifest.files.include.some(item => !safeRelativePath(item)))) {
+        throw new Error("Manifest 'files.include' must be an array of safe relative paths.");
+    }
+    if (manifest.files?.exclude !== undefined &&
+        (!Array.isArray(manifest.files.exclude) ||
+         manifest.files.exclude.some(item => typeof item !== "string" || !item.trim() || item.includes("/") || item.includes("\\\\")))) {
+        throw new Error("Manifest 'files.exclude' must be an array of path names.");
     }
 
     const hasFrontends = manifest.frontends !== undefined;
