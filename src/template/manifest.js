@@ -24,13 +24,13 @@ function validateTechnologyOptions(options, label, expectedRoot) {
         if (typeof option.path !== "string" || option.path.trim() === "") {
             throw new Error(`Technology '${option.id}' in '${label}' must define a path.`);
         }
-        if (!option.path.startsWith(`${expectedRoot}/`)) {
-            throw new Error(`Technology '${option.id}' in '${label}' must be located under '${expectedRoot}/'.`);
-        }
         const segments = option.path.split("/");
         if (option.path.startsWith("/") || option.path.includes("\\") ||
             segments.some(segment => segment === "" || segment === "." || segment === "..")) {
             throw new Error(`Technology '${option.id}' in '${label}' has an unsafe path: '${option.path}'.`);
+        }
+        if (!option.path.startsWith(`${expectedRoot}/`)) {
+            throw new Error(`Technology '${option.id}' in '${label}' must be located under '${expectedRoot}/'.`);
         }
         if (option.default === true) defaultCount += 1;
         if (option.default !== undefined && typeof option.default !== "boolean") {
