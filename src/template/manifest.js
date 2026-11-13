@@ -52,7 +52,7 @@ export function validateManifest(manifest) {
     }
     const safeRelativePath = value =>
         typeof value === "string" && value.trim() !== "" &&
-        !value.startsWith("/") && !value.includes("\\\\") &&
+        !value.startsWith("/") && !value.includes("\\") &&
         value.split("/").every(segment => segment && segment !== "." && segment !== "..");
 
     if (manifest.components?.some(component => !safeRelativePath(component))) {
@@ -69,7 +69,7 @@ export function validateManifest(manifest) {
     }
     if (manifest.files?.exclude !== undefined &&
         (!Array.isArray(manifest.files.exclude) ||
-         manifest.files.exclude.some(item => typeof item !== "string" || !item.trim() || item.includes("/") || item.includes("\\\\")))) {
+         manifest.files.exclude.some(item => typeof item !== "string" || !item.trim() || item.includes("/") || item.includes("\\")))) {
         throw new Error("Manifest 'files.exclude' must be an array of path names.");
     }
 
