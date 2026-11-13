@@ -53,3 +53,16 @@ test("downloads selected files from a real GitHub template snapshot", {
         fs.rmSync(temp, { recursive: true, force: true });
     }
 });
+
+test("resolves a Git branch name containing slashes", {
+    skip: process.env.CDIS_LIVE_TESTS !== "1",
+    timeout: 120000
+}, async () => {
+    const snapshot = await fetchTemplateSnapshot(
+        "feat/component-download-manifest",
+        "heads"
+    );
+    assert.match(snapshot.sha, /^[0-9a-f]{40}$/);
+    assert.ok(snapshot.tree.length > 0);
+    assert.ok(snapshot.manifest.files.include.includes(".gitignore"));
+});
