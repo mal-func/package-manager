@@ -4,7 +4,7 @@ function getLabel(option) {
     return option.name || option.label || option.id;
 }
 
-async function askForOption(rl, message, options, defaultId) {
+async function askForOption(rl, message, options, defaultId, output) {
     if (options.length === 0) {
         throw new Error(`No available choices for ${message.toLowerCase()}.`);
     }
@@ -15,7 +15,7 @@ async function askForOption(rl, message, options, defaultId) {
     );
 
     while (true) {
-        console.log(`\n${message}\n${choices.join("\n")}`);
+        output.write(`\n${message}\n${choices.join("\n")}\n`);
         const answer = (await rl.question(`Choose 1-${options.length} [${defaultIndex + 1}]: `)).trim();
         if (answer === "") return options[defaultIndex];
 
@@ -23,7 +23,7 @@ async function askForOption(rl, message, options, defaultId) {
         if (Number.isInteger(choice) && choice >= 1 && choice <= options.length) {
             return options[choice - 1];
         }
-        console.log(`Please enter a number between 1 and ${options.length}, or press Enter for the default.`);
+        output.write(`Please enter a number between 1 and ${options.length}, or press Enter for the default.\n`);
     }
 }
 
