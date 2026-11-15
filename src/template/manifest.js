@@ -4,7 +4,7 @@ import axios from "axios";
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
-function validateTechnologyOptions(options, label) {
+function validateTechnologyOptions(options, label, expectedRoot) {
     if (!Array.isArray(options) || options.length === 0) {
         throw new Error(`Manifest '${label}' must be a non-empty array.`);
     }
@@ -29,6 +29,9 @@ function validateTechnologyOptions(options, label) {
             segments.some(segment => segment === "" || segment === "." || segment === "..")) {
             throw new Error(`Technology '${option.id}' in '${label}' has an unsafe path: '${option.path}'.`);
         }
+        if (!option.path.startsWith(`${expectedRoot}/`)) {
+            throw new Error(`Technology '${option.id}' in '${label}' must be located under '${expectedRoot}/'.`);
+        }
         if (option.default === true) defaultCount += 1;
         if (option.default !== undefined && typeof option.default !== "boolean") {
             throw new Error(`The default field for '${option.id}' in '${label}' must be a boolean.`);
@@ -45,8 +48,32 @@ export function validateManifest(manifest) {
         !manifest.name || !manifest.schemaVersion) {
         throw new Error("Invalid template manifest.");
     }
-    if (manifest.components !== undefined && !Array.isArray(manifest.components)) {
-        throw new Error("Manifest 'components' must be an array.");
+    if (manifest.components !== undefined &&
+        (!Array.isArray(manifest.components) ||
+         manifest.components.some(component => typeof component !== "string" || !component.trim()))) {
+        throw new Error("Manifest 'components' must be an array of non-empty paths.");
+    }
+    const safeRelativePath = value =>
+        typeof value === "string" && value.trim() !== "" &&
+        !value.startsWith("/") && !value.includes("\\") &&
+        value.split("/").every(segment => segment && segment !== "." && segment !== "..");
+
+    if (manifest.components?.some(component => !safeRelativePath(component))) {
+        throw new Error("Manifest 'components' contains an unsafe path.");
+    }
+    if (manifest.files !== undefined &&
+        (!manifest.files || typeof manifest.files !== "object" || Array.isArray(manifest.files))) {
+        throw new Error("Manifest 'files' must be an object.");
+    }
+    if (manifest.files?.include !== undefined &&
+        (!Array.isArray(manifest.files.include) ||
+         manifest.files.include.some(item => !safeRelativePath(item)))) {
+        throw new Error("Manifest 'files.include' must be an array of safe relative paths.");
+    }
+    if (manifest.files?.exclude !== undefined &&
+        (!Array.isArray(manifest.files.exclude) ||
+         manifest.files.exclude.some(item => typeof item !== "string" || !item.trim() || item.includes("/") || item.includes("\\")))) {
+        throw new Error("Manifest 'files.exclude' must be an array of path names.");
     }
 
     const hasFrontends = manifest.frontends !== undefined;
@@ -56,8 +83,8 @@ export function validateManifest(manifest) {
     }
 
     if (hasFrontends) {
-        const frontendIds = validateTechnologyOptions(manifest.frontends, "frontends");
-        const backendIds = validateTechnologyOptions(manifest.backends, "backends");
+        const frontendIds = validateTechnologyOptions(manifest.frontends, "frontends", "front-end");
+        const backendIds = validateTechnologyOptions(manifest.backends, "backends", "back-end");
 
         if (manifest.compatibility !== undefined) {
             const compatibility = manifest.compatibility;

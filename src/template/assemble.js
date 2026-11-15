@@ -25,7 +25,7 @@ function copyDirectory(sourceRoot, relativeSource, destination, excluded) {
     });
 }
 
-function writeProjectReadme(destination, manifest, selection, projectName) {
+export function writeProjectReadme(destination, manifest, selection, projectName) {
     const frontendReadme = `${selection.frontend.path}/README.md`;
     const backendReadme = `${selection.backend.path}/README.md`;
     const lines = [
