@@ -32,7 +32,7 @@ test("prompts for both technologies and returns the selected IDs", async () => {
 });
 
 test("filters backend choices using manifest compatibility", async () => {
-    const result = await runPrompt("2\n");
+    const result = await runPrompt("2\n1\n");
     assert.deepEqual(result, { frontend: "vue", backend: "express" });
 });
 
