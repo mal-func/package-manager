@@ -28,9 +28,9 @@ async function askForOption(rl, message, options, defaultId, output) {
 }
 
 /**
- * Collects only the technology choices that were not supplied as CLI flags.
- * Compatibility remains sourced from the manifest and is validated again by
- * resolveTechnologySelection before any files are downloaded.
+ * Collects only technology choices not supplied through CLI flags.
+ * The manifest defines available choices and compatibility; the existing
+ * selection resolver remains responsible for final validation.
  */
 export async function promptForTechnologies(manifest, {
     frontend,
@@ -46,11 +46,17 @@ export async function promptForTechnologies(manifest, {
     try {
         let selectedFrontend = frontend;
         if (needsFrontend) {
+            const compatibleFrontends = backend && manifest.compatibility
+                ? manifest.frontends.filter(option => manifest.compatibility[option.id]?.includes(backend))
+                : manifest.frontends;
+            const defaultFrontend = compatibleFrontends.find(option => option.default)?.id
+                || compatibleFrontends[0]?.id;
             const choice = await askForOption(
                 rl,
                 "Which frontend would you like to use?",
-                manifest.frontends,
-                manifest.frontends.find(option => option.default)?.id
+                compatibleFrontends,
+                defaultFrontend,
+                output
             );
             selectedFrontend = choice.id;
         }
@@ -67,7 +73,8 @@ export async function promptForTechnologies(manifest, {
                 rl,
                 "Which backend would you like to use?",
                 availableBackends,
-                defaultBackend
+                defaultBackend,
+                output
             );
             selectedBackend = choice.id;
         }
