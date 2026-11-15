@@ -8,43 +8,93 @@ import { fileURLToPath } from "node:url";
 
 const cliPath = fileURLToPath(new URL("../../bin/cdis.js", import.meta.url));
 
-test("cdis create generates a real project using component-level downloads", {
+const supportedStacks = [
+    { frontend: "react", backend: "express" },
+    { frontend: "react", backend: "fastapi" },
+    { frontend: "vue", backend: "express" },
+    { frontend: "vue", backend: "fastapi" }
+];
+
+test("cdis create generates projects for all four supported frontend/backend combinations", {
     skip: process.env.CDIS_FULL_LIVE_TESTS !== "1",
-    timeout: 240000
+    timeout: 900000
 }, () => {
-    const workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-full-create-"));
-    const projectDirectory = path.join(workingDirectory, "generated-app");
+    for (const { frontend, backend } of supportedStacks) {
+        const projectName = `generated-${frontend}-${backend}`;
+        const workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-full-create-"));
+        const projectDirectory = path.join(workingDirectory, projectName);
 
-    try {
-        const result = spawnSync(
-            process.execPath,
-            [cliPath, "create", "generated-app"],
-            {
-                cwd: workingDirectory,
-                encoding: "utf8",
-                timeout: 210000,
-                maxBuffer: 10 * 1024 * 1024
-            }
-        );
+        try {
+            const result = spawnSync(
+                process.execPath,
+                [
+                    cliPath,
+                    "create",
+                    projectName,
+                    "--frontend",
+                    frontend,
+                    "--backend",
+                    backend
+                ],
+                {
+                    cwd: workingDirectory,
+                    encoding: "utf8",
+                    timeout: 240000,
+                    maxBuffer: 10 * 1024 * 1024
+                }
+            );
 
-        assert.equal(result.status, 0, `CLI failed:\n${result.stdout}\n${result.stderr}`);
-        assert.match(result.stdout, /Project 'generated-app' created successfully/);
+            assert.equal(
+                result.status,
+                0,
+                `CLI failed for ${frontend} + ${backend}:\n${result.stdout}\n${result.stderr}`
+            );
+            assert.match(
+                result.stdout,
+                new RegExp(`Project '${projectName}' created successfully`)
+            );
 
-        assert.equal(fs.existsSync(path.join(projectDirectory, "front-end/react/package.json")), true);
-        assert.equal(fs.existsSync(path.join(projectDirectory, "back-end/express/package.json")), true);
-        assert.equal(fs.existsSync(path.join(projectDirectory, "deployment/compose/compose.yaml")), true);
-        assert.equal(fs.existsSync(path.join(projectDirectory, "docs/START-HERE.md")), true);
-        assert.equal(fs.existsSync(path.join(projectDirectory, "front-end/vue")), false);
-        assert.equal(fs.existsSync(path.join(projectDirectory, "back-end/fastapi")), false);
-        assert.match(
-            fs.readFileSync(path.join(projectDirectory, "README.md"), "utf8"),
-            /Frontend: \*\*react\*\*/
-        );
+            assert.equal(
+                fs.existsSync(path.join(projectDirectory, `front-end/${frontend}/package.json`)),
+                true,
+                `selected frontend ${frontend} should be generated`
+            );
+            assert.equal(
+                fs.existsSync(path.join(projectDirectory, `back-end/${backend}`)),
+                true,
+                `selected backend ${backend} should be generated`
+            );
 
-        const deployScript = path.join(projectDirectory, "deployment/scripts/deploy.sh");
-        assert.equal(fs.existsSync(deployScript), true);
-        assert.notEqual(fs.statSync(deployScript).mode & 0o111, 0);
-    } finally {
-        fs.rmSync(workingDirectory, { recursive: true, force: true });
+            const otherFrontend = frontend === "react" ? "vue" : "react";
+            const otherBackend = backend === "express" ? "fastapi" : "express";
+            assert.equal(
+                fs.existsSync(path.join(projectDirectory, `front-end/${otherFrontend}`)),
+                false,
+                `unselected frontend ${otherFrontend} must not be generated`
+            );
+            assert.equal(
+                fs.existsSync(path.join(projectDirectory, `back-end/${otherBackend}`)),
+                false,
+                `unselected backend ${otherBackend} must not be generated`
+            );
+
+            assert.equal(fs.existsSync(path.join(projectDirectory, "deployment/compose/compose.yaml")), true);
+            assert.equal(fs.existsSync(path.join(projectDirectory, "docs/START-HERE.md")), true);
+            assert.equal(fs.existsSync(path.join(projectDirectory, ".gitignore")), true);
+
+            const generatedReadme = fs.readFileSync(path.join(projectDirectory, "README.md"), "utf8");
+            assert.match(generatedReadme, new RegExp(`Frontend: \\*\\*${frontend}\\*\\*`));
+            assert.match(generatedReadme, new RegExp(`Backend: \\*\\*${backend}\\*\\*`));
+
+            const deployScript = path.join(projectDirectory, "deployment/scripts/deploy.sh");
+            assert.equal(fs.existsSync(deployScript), true);
+            assert.notEqual(
+                fs.statSync(deployScript).mode & 0o111,
+                0,
+                "generated deployment script should retain executable permissions"
+            );
+        } finally {
+            fs.rmSync(workingDirectory, { recursive: true, force: true });
+        }
     }
 });
