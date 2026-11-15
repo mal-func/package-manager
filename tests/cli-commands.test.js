@@ -29,6 +29,7 @@ test("cdis create --help shows create options without downloading a template", (
     assert.equal(result.status, 0);
     assert.match(result.stdout, /--frontend <id>/);
     assert.match(result.stdout, /--backend <id>/);
+    assert.match(result.stdout, /--no-interactive/);
     assert.match(result.stdout, /--version <version>/);
     assert.match(result.stdout, /--branch <branch>/);
 });

@@ -10,6 +10,7 @@ import { fetchTemplateSnapshot, downloadSelectedComponents } from "../src/templa
 import { downloadTemplate } from "../src/template/download.js";
 import { extractTemplate } from "../src/template/extract.js";
 import { resolveTechnologySelection } from "../src/template/selection.js";
+import { promptForTechnologies } from "../src/cli/prompts.js";
 import { assembleTemplate, writeProjectReadme } from "../src/template/assemble.js";
 
 const CLI_VERSION = "1.0.0";
@@ -78,6 +79,7 @@ Usage:
 Options:
   --frontend <id>       Frontend ID declared in cdis-template.json
   --backend <id>        Backend ID declared in cdis-template.json
+  --no-interactive     Use manifest defaults instead of prompting
   --version <version>  Use a published template tag instead of default main
   --branch <branch>    Git branch to use instead of a published tag
   --help                Show this help
@@ -178,7 +180,11 @@ async function createProject() {
         const manifest = validateManifest(snapshot.manifest);
 
         if (manifest.frontends && manifest.backends) {
-            const selection = resolveTechnologySelection(manifest, { frontend, backend });
+            const shouldPrompt = process.stdin.isTTY && process.stdout.isTTY && !args.includes("--no-interactive");
+            const requested = shouldPrompt
+                ? await promptForTechnologies(manifest, { frontend, backend })
+                : { frontend, backend };
+            const selection = resolveTechnologySelection(manifest, requested);
             console.log(`Template: ${manifest.name} (${ref}, ${snapshot.sha.slice(0, 7)})`);
             console.log(`Selected frontend: ${selection.frontend.id}`);
             console.log(`Selected backend: ${selection.backend.id}`);
