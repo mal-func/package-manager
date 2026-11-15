@@ -79,6 +79,7 @@ Usage:
 Options:
   --frontend <id>       Frontend ID declared in cdis-template.json
   --backend <id>        Backend ID declared in cdis-template.json
+  --no-interactive     Use manifest defaults instead of prompting
   --version <version>  Use a published template tag instead of default main
   --branch <branch>    Git branch to use instead of a published tag
   --help                Show this help
