@@ -1,5 +1,5 @@
 const DEFAULT_TEMPLATE_REPOSITORY = "mal-func/cdis-template-edit";
-const DEFAULT_TEMPLATE_BRANCH = "main";
+const DEFAULT_BRANCH = "main";
 const REPOSITORY_PATTERN = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/;
 
 export function resolveTemplateRepository(value = process.env.CDIS_TEMPLATE_REPOSITORY) {
@@ -12,7 +12,7 @@ export function resolveTemplateRepository(value = process.env.CDIS_TEMPLATE_REPO
 }
 
 export function resolveTemplateBranch(value = process.env.CDIS_TEMPLATE_BRANCH) {
-    return value === undefined || value.trim() === "" ? DEFAULT_TEMPLATE_BRANCH : value.trim();
+    return value === undefined || value.trim() === "" ? DEFAULT_BRANCH : value.trim();
 }
 
 export const TEMPLATE_REPOSITORY = resolveTemplateRepository();
