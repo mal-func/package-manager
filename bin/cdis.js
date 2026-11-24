@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
+import { DEFAULT_TEMPLATE_BRANCH } from "../src/config.js";
+
 import { validateManifest, readManifest } from "../src/template/manifest.js";
 import { getTemplateVersions } from "../src/template/versions.js";
 import { fetchTemplateSnapshot, downloadSelectedComponents } from "../src/template/component-download.js";
@@ -14,7 +16,7 @@ import { promptForTechnologies } from "../src/cli/prompts.js";
 import { assembleTemplate, writeProjectReadme } from "../src/template/assemble.js";
 
 const CLI_VERSION = "1.0.0";
-const DEFAULT_TEMPLATE_REF = "main";
+const DEFAULT_TEMPLATE_REF = DEFAULT_TEMPLATE_BRANCH;
 const DEFAULT_TEMPLATE_REF_TYPE = "heads";
 const args = process.argv.slice(2);
 const command = args[0];
@@ -59,6 +61,10 @@ Template info/options options:
   --version <version>         Inspect a published template version
   --branch <branch>           Inspect a Git branch
 
+Environment:
+  CDIS_TEMPLATE_REPOSITORY    Override the template source (owner/repository)
+  CDIS_TEMPLATE_BRANCH        Override the default template branch (default: main)
+
 Examples:
   cdis create my-project
   cdis create my-project --frontend vue --backend express
@@ -80,7 +86,7 @@ Options:
   --frontend <id>       Frontend ID declared in cdis-template.json
   --backend <id>        Backend ID declared in cdis-template.json
   --no-interactive     Use manifest defaults instead of prompting
-  --version <version>  Use a published template tag instead of default main
+  --version <version>  Use a published template tag instead of the default branch
   --branch <branch>    Git branch to use instead of a published tag
   --help                Show this help
 
