@@ -16,6 +16,29 @@ node bin/cdis.js help
 
 After installing the package globally, use the same commands with `cdis`.
 
+## Configure the template source
+
+The CLI keeps its template source configuration in `src/config.js`. The defaults point to the canonical template repository and its `main` branch. You can override either value through environment variables without editing the CLI:
+
+| Environment variable | Purpose | Default |
+| --- | --- | --- |
+| `CDIS_TEMPLATE_REPOSITORY` | GitHub repository in `owner/repository` format | `mal-func/cdis-template-edit` |
+| `CDIS_TEMPLATE_BRANCH` | Default branch used when no `--branch` or `--version` is supplied | `main` |
+
+macOS/Linux:
+```bash
+CDIS_TEMPLATE_REPOSITORY=my-org/my-template CDIS_TEMPLATE_BRANCH=main cdis create portal
+```
+
+PowerShell:
+```powershell
+$env:CDIS_TEMPLATE_REPOSITORY = "my-org/my-template"
+$env:CDIS_TEMPLATE_BRANCH = "main"
+cdis create portal
+```
+
+The repository override applies to component downloads, manifest retrieval, tag listing and legacy archive downloads. The target must be a public GitHub repository accessible to the CLI.
+
 ## Commands
 
 | Command | Purpose |
