@@ -1,11 +1,7 @@
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-
-const OWNER = "mal-func";
-const REPOSITORY = "cdis-template-edit";
-const API_BASE = `https://api.github.com/repos/${OWNER}/${REPOSITORY}`;
-const RAW_BASE = `https://raw.githubusercontent.com/${OWNER}/${REPOSITORY}`;
+import { DEFAULT_TEMPLATE_BRANCH, TEMPLATE_API_BASE, TEMPLATE_RAW_BASE } from "../config.js";
 
 function validateRef(ref, refType) {
     if (!["heads", "tags"].includes(refType)) {
@@ -22,13 +18,13 @@ function encodeRepoPath(repoPath) {
     return repoPath.split("/").map(encodeURIComponent).join("/");
 }
 
-export async function fetchTemplateSnapshot(ref = "main", refType = "heads") {
+export async function fetchTemplateSnapshot(ref = DEFAULT_TEMPLATE_BRANCH, refType = "heads") {
     validateRef(ref, refType);
 
     let commit;
     try {
         const commitResponse = await axios.get(
-            `${API_BASE}/commits/${encodeURIComponent(ref)}`,
+            `${TEMPLATE_API_BASE}/commits/${encodeURIComponent(ref)}`,
             { timeout: 20000 }
         );
         commit = commitResponse.data;
@@ -44,7 +40,7 @@ export async function fetchTemplateSnapshot(ref = "main", refType = "heads") {
 
     let treeResponse;
     try {
-        treeResponse = await axios.get(`${API_BASE}/git/trees/${sha}?recursive=1`, {
+        treeResponse = await axios.get(`${TEMPLATE_API_BASE}/git/trees/${sha}?recursive=1`, {
             timeout: 30000
         });
     } catch (error) {
@@ -58,7 +54,7 @@ export async function fetchTemplateSnapshot(ref = "main", refType = "heads") {
     let manifestResponse;
     try {
         manifestResponse = await axios.get(
-            `${RAW_BASE}/${sha}/cdis-template.json`,
+            `${TEMPLATE_RAW_BASE}/${sha}/cdis-template.json`,
             { timeout: 20000 }
         );
     } catch (error) {
@@ -122,7 +118,7 @@ function safeDestination(root, repoPath) {
 }
 
 async function downloadOne(entry, snapshot, destinationRoot, request) {
-    const url = `${RAW_BASE}/${snapshot.sha}/${encodeRepoPath(entry.path)}`;
+    const url = `${TEMPLATE_RAW_BASE}/${snapshot.sha}/${encodeRepoPath(entry.path)}`;
     const destination = safeDestination(destinationRoot, entry.path);
     fs.mkdirSync(path.dirname(destination), { recursive: true });
 
