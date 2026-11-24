@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
+import { TEMPLATE_RAW_BASE } from "../config.js";
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -131,8 +132,8 @@ export function readManifest(templateDirectory) {
 }
 
 export async function fetchTemplateManifest(version) {
-    const manifestUrl =
-        `https://raw.githubusercontent.com/mal-func/cdis-template-edit/${version}/cdis-template.json`;
+    const encodedRef = version.split("/").map(encodeURIComponent).join("/");
+    const manifestUrl = `${TEMPLATE_RAW_BASE}/${encodedRef}/cdis-template.json`;
     try {
         const response = await axios.get(manifestUrl);
         return validateManifest(response.data);
