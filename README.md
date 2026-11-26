@@ -121,6 +121,20 @@ The Git tree API returns paths and blob metadata; it does not return the content
 
 Older manifests without technology option arrays retain a legacy ZIP fallback for backward compatibility.
 
+## Developer tooling choices
+
+The template manifest declares supported tools per technology. If more than one linter is supported for a selected stack, the interactive CLI asks which one to use. React, Vue and Express currently offer ESLint or Biome. FastAPI uses Ruff as its sole declared linter, so no unnecessary choice is shown.
+
+Choose linters non-interactively with flags:
+
+```bash
+cdis create portal --frontend react --backend express --frontend-linter biome --backend-linter eslint
+```
+
+Prettier and Ruff formatting are optional additions. Interactive mode asks whether to add them; non-interactive mode accepts `--prettier` and `--ruff-format`. Choosing Biome replaces the ESLint setup for that selected JavaScript/TypeScript project. Biome's Vue single-file component support is experimental and is explicitly enabled in the generated configuration.
+
+After selecting Biome or Prettier, run `npm install` in each affected JavaScript/TypeScript project. FastAPI developers can run `ruff format .` when Ruff formatting is enabled.
+
 ## Tests
 
 ```bash

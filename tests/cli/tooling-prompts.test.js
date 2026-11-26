@@ -45,7 +45,7 @@ test("offers lint alternatives and optional formatting choices", async () => {
 });
 
 test("does not ask for a linter choice when only one is declared", async () => {
-    const { result, prompts } = await run(["n", "n"], "fastapi");
-    assert.equal(result.backendLinter, "ruff");
-    assert.equal(prompts.length, 2);
+    const { result, prompts } = await run(["n"], "fastapi");
+    assert.equal(result.backendLinter, undefined);
+    assert.equal(prompts.length, 3);
 });
