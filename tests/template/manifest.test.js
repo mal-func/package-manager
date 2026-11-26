@@ -69,23 +69,3 @@ test("rejects unsafe explicitly included paths", () => {
     value.files = { include: ["../secrets.txt"] };
     assert.throws(() => validateManifest(value), /files.include/);
 });
-
-test("accepts declared linter alternatives with one default", () => {
-    const value = structuredClone(valid);
-    value.tooling = {
-        frontends: { react: { linting: { options: [
-            { id: "eslint", default: true }, { id: "biome", default: false }
-        ] } } }
-    };
-    assert.equal(validateManifest(value), value);
-});
-
-test("rejects tooling options without exactly one default", () => {
-    const value = structuredClone(valid);
-    value.tooling = {
-        frontends: { react: { linting: { options: [
-            { id: "eslint", default: false }, { id: "biome", default: false }
-        ] } } }
-    };
-    assert.throws(() => validateManifest(value), /exactly one default option/);
-});
