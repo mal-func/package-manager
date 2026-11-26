@@ -132,6 +132,20 @@ function displayTechnologyOptions(manifest) {
     } else {
         console.log("\nCompatibility: not declared by this template version.");
     }
+
+    if (manifest.tooling) {
+        console.log("\nDeveloper tooling:");
+        for (const [area, technologies] of Object.entries(manifest.tooling)) {
+            for (const [technology, capabilities] of Object.entries(technologies)) {
+                for (const [capability, config] of Object.entries(capabilities)) {
+                    const choices = config.options.map(option =>
+                        `${option.name || option.id}${option.default ? " (default)" : ""}`
+                    );
+                    console.log(`  ${technology} ${capability}: ${choices.join(", ")}`);
+                }
+            }
+        }
+    }
 }
 
 function resolveRefOptions() {
