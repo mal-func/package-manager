@@ -44,8 +44,9 @@ test("offers lint alternatives and optional formatting choices", async () => {
     assert.equal(prompts.length, 3);
 });
 
-test("does not ask for a linter choice when only one is declared", async () => {
-    const { result, prompts } = await run(["n", "n"], "fastapi");
+test("uses the sole FastAPI linter without asking for a backend linter choice", async () => {
+    const { result, prompts } = await run(["1", "n", "n"], "fastapi");
     assert.equal(result.backendLinter, "ruff");
-    assert.equal(prompts.length, 2);
+    assert.equal(prompts.length, 3); // frontend linter, Prettier, Ruff formatter
+    assert.equal(prompts.some(message => message.includes("backend linter")), false);
 });
