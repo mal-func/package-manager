@@ -41,7 +41,7 @@ function writePackage(packagePath, value) {
     fs.writeFileSync(packagePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-function useBiome(projectDirectory) {
+function useBiome(projectDirectory, technologyId) {
     const packagePath = path.join(projectDirectory, "package.json");
     const packageJson = readPackage(packagePath);
     packageJson.devDependencies ??= {};
@@ -61,13 +61,15 @@ function useBiome(projectDirectory) {
         const configPath = path.join(projectDirectory, name);
         if (fs.existsSync(configPath)) fs.rmSync(configPath, { force: true });
     }
-    fs.writeFileSync(path.join(projectDirectory, "biome.json"), `${JSON.stringify({
+    const biomeConfig = {
         "$schema": "https://biomejs.dev/schemas/2.6.9/schema.json",
         "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
         "files": { "ignoreUnknown": true },
         "linter": { "enabled": true, "rules": { "recommended": true } },
         "formatter": { "enabled": false }
-    }, null, 2)}\n`);
+    };
+    if (technologyId === "vue") biomeConfig.html = { experimentalFullSupportEnabled: true, formatter: { enabled: false } };
+    fs.writeFileSync(path.join(projectDirectory, "biome.json"), `${JSON.stringify(biomeConfig, null, 2)}\n`);
     removeLockfile(projectDirectory);
 }
 
@@ -111,8 +113,8 @@ export function applyToolingSelection(destination, technologySelection, toolingS
     const frontendDirectory = path.join(destination, technologySelection.frontend.path);
     const backendDirectory = path.join(destination, technologySelection.backend.path);
 
-    if (toolingSelection.frontendLinter === "biome") useBiome(frontendDirectory);
-    if (toolingSelection.backendLinter === "biome") useBiome(backendDirectory);
+    if (toolingSelection.frontendLinter === "biome") useBiome(frontendDirectory, technologySelection.frontend.id);
+    if (toolingSelection.backendLinter === "biome") useBiome(backendDirectory, technologySelection.backend.id);
     if (toolingSelection.prettier) {
         addPrettier(frontendDirectory);
         if (technologySelection.backend.id === "express") addPrettier(backendDirectory);
