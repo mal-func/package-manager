@@ -20,6 +20,9 @@ function choose(options, requested, label) {
 }
 
 export function resolveToolingSelection(manifest, technologySelection, requested = {}) {
+    if (requested.ruffFormat === true && technologySelection.backend.id !== "fastapi") {
+        throw new Error("Ruff formatting can only be enabled for the FastAPI backend.");
+    }
     const frontendOptions = optionsFor(manifest, "frontends", technologySelection.frontend.id, "linting");
     const backendOptions = optionsFor(manifest, "backends", technologySelection.backend.id, "linting");
     return {
