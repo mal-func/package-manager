@@ -87,7 +87,7 @@ function addPrettier(projectDirectory) {
     writePackage(packagePath, packageJson);
     fs.writeFileSync(path.join(projectDirectory, ".prettierrc.json"), `${JSON.stringify({
         "semi": true,
-        "singleQuote": true,
+        "singleQuote": false,
         "trailingComma": "all",
         "printWidth": 100
     }, null, 2)}\n`);
