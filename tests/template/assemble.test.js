@@ -22,6 +22,8 @@ test("assembles only selected technology paths and shared components", () => {
         fs.writeFileSync(path.join(template, "front-end/vue", "README.md"), "Vue guide");
         fs.writeFileSync(path.join(template, "back-end/express", "README.md"), "Express guide");
         fs.writeFileSync(path.join(template, "deployment", "README.md"), "Deployment guide");
+        fs.mkdirSync(path.join(template, "deployment", "env"), { recursive: true });
+        fs.writeFileSync(path.join(template, "deployment", "env", "production.env.example"), "PUBLIC_ORIGIN=http://localhost\\n");
         fs.writeFileSync(path.join(template, "deployment", "compose.yml"), "services: {}");
         fs.writeFileSync(path.join(template, "docs", "guide.md"), "guide");
         fs.writeFileSync(path.join(template, "README.md"), "template readme");
