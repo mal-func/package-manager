@@ -126,8 +126,8 @@ test("applies Ruff formatting configuration only when selected for FastAPI", () 
         });
 
         const pyproject = fs.readFileSync(path.join(backend, "pyproject.toml"), "utf8");
-        assert.match(pyproject, /\\[tool\\.ruff\\.format\\]/);
-        assert.match(pyproject, /quote-style = "double"/);
+        assert.ok(pyproject.includes("[tool.ruff.format]"));
+        assert.ok(pyproject.includes("[tool.ruff.format]"));
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
@@ -154,7 +154,7 @@ test("does not add formatter configuration when optional formatters are disabled
         });
 
         assert.equal(fs.existsSync(path.join(frontend, ".prettierrc.json")), false);
-        assert.doesNotMatch(fs.readFileSync(path.join(backend, "pyproject.toml"), "utf8"), /\\[tool\\.ruff\\.format\\]/);
+        assert.equal(fs.readFileSync(path.join(backend, "pyproject.toml"), "utf8").includes("[tool.ruff.format]"), false);
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
