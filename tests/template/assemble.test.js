@@ -98,8 +98,8 @@ test("writes selected stack deployment defaults for each generated stack", () =>
         assert.match(env, /^BACKEND_BUILD_CONTEXT=..\/..\/back-end\/fastapi$/m);
 
         const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
-        assert.match(readme, /compose\\.fastapi\\.yaml/);
-        assert.match(readme, /deploy\\.sh <frontend-image-tag> <backend-image-tag> vue fastapi/);
+        assert.ok(readme.includes("compose/compose.fastapi.yaml"));
+        assert.ok(readme.includes("deploy.sh <frontend-image-tag> <backend-image-tag> vue fastapi"));
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
