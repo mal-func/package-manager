@@ -110,6 +110,10 @@ test("writes selected stack deployment defaults for all four combinations", () =
 
             const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
             assert.ok(readme.includes("deploy.sh <frontend-image-tag> <backend-image-tag>"));
+            assert.ok(readme.includes("./scripts/e2e-up.sh") || readme.includes("CDIS_BACKEND=fastapi ./scripts/e2e-up.sh"));
+            assert.match(readme, /waits for the backend \/health endpoint/);
+            assert.match(readme, /migration and seed job/);
+            assert.match(readme, /DB_ROOT_PASSWORD/);
             assert.equal(readme.includes("compose/compose.fastapi.yaml"), backend === "fastapi");
 
             const productionEnv = fs.readFileSync(path.join(root, "deployment", "env", "production.env.example"), "utf8");
