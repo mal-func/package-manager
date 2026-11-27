@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { assembleTemplate } from "../../src/template/assemble.js";
+import { assembleTemplate, writeProjectReadme } from "../../src/template/assemble.js";
 
 test("assembles only selected technology paths and shared components", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-assemble-test-"));
@@ -75,6 +75,31 @@ test("excludes sensitive and generated files while assembling", () => {
         assert.equal(fs.existsSync(path.join(output, "front-end/react/.env")), false);
         assert.equal(fs.existsSync(path.join(output, "front-end/react/node_modules")), false);
         assert.equal(fs.existsSync(path.join(output, "front-end/react/app.js")), true);
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+
+test("writes selected stack deployment defaults for each generated stack", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-stack-defaults-"));
+    try {
+        fs.mkdirSync(path.join(root, "deployment", "compose"), { recursive: true });
+        const manifest = { name: "test-template", schemaVersion: "1.0" };
+        writeProjectReadme(root, manifest, {
+            frontend: { id: "vue", path: "front-end/vue" },
+            backend: { id: "fastapi", path: "back-end/fastapi" }
+        }, "vue-fastapi-app");
+
+        const env = fs.readFileSync(path.join(root, "deployment", "compose", ".env"), "utf8");
+        assert.match(env, /^FRONTEND_STACK=vue$/m);
+        assert.match(env, /^BACKEND_STACK=fastapi$/m);
+        assert.match(env, /^FRONTEND_BUILD_CONTEXT=..\/..\/front-end\/vue$/m);
+        assert.match(env, /^BACKEND_BUILD_CONTEXT=..\/..\/back-end\/fastapi$/m);
+
+        const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
+        assert.match(readme, /compose\\.fastapi\\.yaml/);
+        assert.match(readme, /deploy\\.sh <frontend-image-tag> <backend-image-tag> vue fastapi/);
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
