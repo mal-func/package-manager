@@ -99,6 +99,8 @@ test("applies optional Prettier scripts and configuration to generated JavaScrip
             assert.ok(pkg.devDependencies.prettier);
             assert.equal(fs.existsSync(path.join(directory, ".prettierrc.json")), true);
             assert.equal(fs.existsSync(path.join(directory, ".prettierignore")), true);
+            const prettierConfig = JSON.parse(fs.readFileSync(path.join(directory, ".prettierrc.json"), "utf8"));
+            assert.equal(prettierConfig.singleQuote, false);
         }
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
