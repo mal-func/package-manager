@@ -127,7 +127,7 @@ test("applies Ruff formatting configuration only when selected for FastAPI", () 
 
         const pyproject = fs.readFileSync(path.join(backend, "pyproject.toml"), "utf8");
         assert.ok(pyproject.includes("[tool.ruff.format]"));
-        assert.ok(pyproject.includes("[tool.ruff.format]"));
+        assert.ok(pyproject.includes('quote-style = "double"'));
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
@@ -141,7 +141,7 @@ test("does not add formatter configuration when optional formatters are disabled
         fs.mkdirSync(frontend, { recursive: true });
         fs.mkdirSync(backend, { recursive: true });
         fs.writeFileSync(path.join(frontend, "package.json"), JSON.stringify({ scripts: {} }));
-        fs.writeFileSync(path.join(backend, "pyproject.toml"), "[tool.ruff]\\nline-length = 100\\n");
+        fs.writeFileSync(path.join(backend, "pyproject.toml"), "[tool.ruff]\nline-length = 100\n");
 
         applyToolingSelection(root, {
             frontend: { id: "react", path: "front-end/react" },
