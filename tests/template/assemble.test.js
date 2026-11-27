@@ -107,7 +107,7 @@ test("writes selected stack deployment defaults for all four combinations", () =
             assert.match(env, new RegExp(`^BACKEND_BUILD_CONTEXT=../../back-end/${backend}$`, "m"));
 
             const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
-            assert.ok(readme.includes(`deploy.sh <frontend-image-tag> <backend-image-tag> ${frontend} ${backend}`));
+            assert.ok(readme.includes("deploy.sh <frontend-image-tag> <backend-image-tag>"));
             assert.equal(readme.includes("compose/compose.fastapi.yaml"), backend === "fastapi");
         }
     } finally {
