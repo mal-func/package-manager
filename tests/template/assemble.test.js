@@ -81,25 +81,33 @@ test("excludes sensitive and generated files while assembling", () => {
 });
 
 
-test("writes selected stack deployment defaults for each generated stack", () => {
+test("writes selected stack deployment defaults for all four combinations", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-stack-defaults-"));
     try {
         fs.mkdirSync(path.join(root, "deployment", "compose"), { recursive: true });
         const manifest = { name: "test-template", schemaVersion: "1.0" };
-        writeProjectReadme(root, manifest, {
-            frontend: { id: "vue", path: "front-end/vue" },
-            backend: { id: "fastapi", path: "back-end/fastapi" }
-        }, "vue-fastapi-app");
+        const combinations = [
+            ["react", "express"],
+            ["vue", "express"],
+            ["react", "fastapi"],
+            ["vue", "fastapi"]
+        ];
+        for (const [frontend, backend] of combinations) {
+            writeProjectReadme(root, manifest, {
+                frontend: { id: frontend, path: `front-end/${frontend}` },
+                backend: { id: backend, path: `back-end/${backend}` }
+            }, `${frontend}-${backend}-app`);
 
-        const env = fs.readFileSync(path.join(root, "deployment", "compose", ".env"), "utf8");
-        assert.match(env, /^FRONTEND_STACK=vue$/m);
-        assert.match(env, /^BACKEND_STACK=fastapi$/m);
-        assert.match(env, /^FRONTEND_BUILD_CONTEXT=..\/..\/front-end\/vue$/m);
-        assert.match(env, /^BACKEND_BUILD_CONTEXT=..\/..\/back-end\/fastapi$/m);
+            const env = fs.readFileSync(path.join(root, "deployment", "compose", ".env"), "utf8");
+            assert.match(env, new RegExp(`^FRONTEND_STACK=${frontend}$`, "m"));
+            assert.match(env, new RegExp(`^BACKEND_STACK=${backend}$`, "m"));
+            assert.match(env, new RegExp(`^FRONTEND_BUILD_CONTEXT=../../front-end/${frontend}$`, "m"));
+            assert.match(env, new RegExp(`^BACKEND_BUILD_CONTEXT=../../back-end/${backend}$`, "m"));
 
-        const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
-        assert.ok(readme.includes("compose/compose.fastapi.yaml"));
-        assert.ok(readme.includes("deploy.sh <frontend-image-tag> <backend-image-tag> vue fastapi"));
+            const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
+            assert.ok(readme.includes(`deploy.sh <frontend-image-tag> <backend-image-tag> ${frontend} ${backend}`));
+            assert.equal(readme.includes("compose/compose.fastapi.yaml"), backend === "fastapi");
+        }
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }
