@@ -15,6 +15,8 @@ test("cdis help and cdis --help show the command list", () => {
         assert.match(result.stdout, /create <project-name>/);
         assert.match(result.stdout, /template versions/);
         assert.match(result.stdout, /template options/);
+        assert.match(result.stdout, /CDIS_TEMPLATE_REPOSITORY/);
+        assert.match(result.stdout, /CDIS_TEMPLATE_BRANCH/);
     }
 });
 

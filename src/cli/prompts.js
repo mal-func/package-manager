@@ -20,6 +20,15 @@ async function askForOption(askQuestion, message, options, defaultId, output) {
     }
 }
 
+async function askYesNo(askQuestion, message, output) {
+    while (true) {
+        const answer = (await askQuestion(`${message} [y/N]: `)).trim().toLowerCase();
+        if (answer === "" || answer === "n" || answer === "no") return false;
+        if (answer === "y" || answer === "yes") return true;
+        output.write("Please answer y or n.\n");
+    }
+}
+
 /** Collect missing selections; manifest rules remain the source of truth. */
 export async function promptForTechnologies(manifest, {
     frontend, backend, input = process.stdin, output = process.stdout, askQuestion
@@ -49,6 +58,50 @@ export async function promptForTechnologies(manifest, {
             selectedBackend = (await askForOption(ask, "Which backend would you like to use?", choices, defaultId, output)).id;
         }
         return { frontend: selectedFrontend, backend: selectedBackend };
+    } finally {
+        rl?.close();
+    }
+}
+
+/** Only asks users to choose when a template declares multiple supported tools. */
+export async function promptForTooling(manifest, technologySelection, {
+    frontendLinter, backendLinter, prettier = false, ruffFormat = false,
+    input = process.stdin, output = process.stdout, askQuestion
+} = {}) {
+    const frontendOptions = manifest.tooling?.frontends?.[technologySelection.frontend.id]?.linting?.options ?? [];
+    const backendOptions = manifest.tooling?.backends?.[technologySelection.backend.id]?.linting?.options ?? [];
+    const needsFrontend = frontendLinter === undefined && frontendOptions.length > 1;
+    const needsBackend = backendLinter === undefined && backendOptions.length > 1;
+    const needsPrettier = !prettier && technologySelection.frontend.id !== undefined;
+    const needsRuffFormat = !ruffFormat && technologySelection.backend.id === "fastapi";
+    if (!needsFrontend && !needsBackend && !needsPrettier && !needsRuffFormat) {
+        return { frontendLinter, backendLinter, prettier, ruffFormat };
+    }
+
+    let rl;
+    const ask = askQuestion || (message => rl.question(message));
+    if (!askQuestion) rl = createInterface({ input, output });
+    try {
+        let selectedFrontendLinter = frontendLinter;
+        if (needsFrontend) {
+            const defaultId = frontendOptions.find(option => option.default)?.id || frontendOptions[0].id;
+            selectedFrontendLinter = (await askForOption(ask, "Which frontend linter would you like to use?", frontendOptions, defaultId, output)).id;
+        }
+        let selectedBackendLinter = backendLinter;
+        if (needsBackend) {
+            const defaultId = backendOptions.find(option => option.default)?.id || backendOptions[0].id;
+            selectedBackendLinter = (await askForOption(ask, "Which backend linter would you like to use?", backendOptions, defaultId, output)).id;
+        }
+        let selectedPrettier = prettier;
+        if (needsPrettier) selectedPrettier = await askYesNo(ask, "Would you like to add optional Prettier formatting?", output);
+        let selectedRuffFormat = ruffFormat;
+        if (needsRuffFormat) selectedRuffFormat = await askYesNo(ask, "Would you like to enable optional Ruff formatting for FastAPI?", output);
+        return {
+            frontendLinter: selectedFrontendLinter,
+            backendLinter: selectedBackendLinter,
+            prettier: selectedPrettier,
+            ruffFormat: selectedRuffFormat
+        };
     } finally {
         rl?.close();
     }

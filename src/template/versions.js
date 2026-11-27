@@ -1,12 +1,10 @@
 import axios from "axios";
-
-const REPOSITORY_API =
-    "https://api.github.com/repos/mal-func/cdis-template-edit";
+import { TEMPLATE_API_BASE } from "../config.js";
 
 export async function getTemplateVersions() {
     try {
         const response = await axios.get(
-            `${REPOSITORY_API}/tags?per_page=100`,
+            `${TEMPLATE_API_BASE}/tags?per_page=100`,
             {
                 headers: {
                     Accept: "application/vnd.github+json"

@@ -16,6 +16,29 @@ node bin/cdis.js help
 
 After installing the package globally, use the same commands with `cdis`.
 
+## Configure the template source
+
+The CLI keeps its template source configuration in `src/config.js`. The defaults point to the canonical template repository and its `main` branch. You can override either value through environment variables without editing the CLI:
+
+| Environment variable | Purpose | Default |
+| --- | --- | --- |
+| `CDIS_TEMPLATE_REPOSITORY` | GitHub repository in `owner/repository` format | `mal-func/cdis-template-edit` |
+| `CDIS_TEMPLATE_BRANCH` | Default branch used when no `--branch` or `--version` is supplied | `main` |
+
+macOS/Linux:
+```bash
+CDIS_TEMPLATE_REPOSITORY=my-org/my-template CDIS_TEMPLATE_BRANCH=main cdis create portal
+```
+
+PowerShell:
+```powershell
+$env:CDIS_TEMPLATE_REPOSITORY = "my-org/my-template"
+$env:CDIS_TEMPLATE_BRANCH = "main"
+cdis create portal
+```
+
+The repository override applies to component downloads, manifest retrieval, tag listing and legacy archive downloads. The target must be a public GitHub repository accessible to the CLI.
+
 ## Commands
 
 | Command | Purpose |
@@ -97,6 +120,20 @@ Resolving the ref to a commit SHA ensures the manifest, file list and file conte
 The Git tree API returns paths and blob metadata; it does not return the contents of every file. The CLI therefore fetches only the selected file contents. This uses more HTTP requests than a ZIP download, but transfers fewer irrelevant files and avoids downloading alternative implementations.
 
 Older manifests without technology option arrays retain a legacy ZIP fallback for backward compatibility.
+
+## Developer tooling choices
+
+The template manifest declares supported tools per technology. If more than one linter is supported for a selected stack, the interactive CLI asks which one to use. React, Vue and Express currently offer ESLint or Biome. FastAPI uses Ruff as its sole declared linter, so no unnecessary choice is shown.
+
+Choose linters non-interactively with flags:
+
+```bash
+cdis create portal --frontend react --backend express --frontend-linter biome --backend-linter eslint
+```
+
+Prettier and Ruff formatting are optional additions. Interactive mode asks whether to add them; non-interactive mode accepts `--prettier` and `--ruff-format`. Choosing Biome replaces the ESLint setup for that selected JavaScript/TypeScript project. Biome's Vue single-file component support is experimental and is explicitly enabled in the generated configuration.
+
+After selecting Biome or Prettier, run `npm install` in each affected JavaScript/TypeScript project. FastAPI developers can run `ruff format .` when Ruff formatting is enabled.
 
 ## Tests
 

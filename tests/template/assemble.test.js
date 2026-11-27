@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import { assembleTemplate } from "../../src/template/assemble.js";
+import { assembleTemplate, writeProjectReadme } from "../../src/template/assemble.js";
 
 test("assembles only selected technology paths and shared components", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-assemble-test-"));
@@ -22,6 +22,8 @@ test("assembles only selected technology paths and shared components", () => {
         fs.writeFileSync(path.join(template, "front-end/vue", "README.md"), "Vue guide");
         fs.writeFileSync(path.join(template, "back-end/express", "README.md"), "Express guide");
         fs.writeFileSync(path.join(template, "deployment", "README.md"), "Deployment guide");
+        fs.mkdirSync(path.join(template, "deployment", "env"), { recursive: true });
+        fs.writeFileSync(path.join(template, "deployment", "env", "production.env.example"), "PUBLIC_ORIGIN=http://localhost\n");
         fs.writeFileSync(path.join(template, "deployment", "compose.yml"), "services: {}");
         fs.writeFileSync(path.join(template, "docs", "guide.md"), "guide");
         fs.writeFileSync(path.join(template, "README.md"), "template readme");
@@ -75,6 +77,49 @@ test("excludes sensitive and generated files while assembling", () => {
         assert.equal(fs.existsSync(path.join(output, "front-end/react/.env")), false);
         assert.equal(fs.existsSync(path.join(output, "front-end/react/node_modules")), false);
         assert.equal(fs.existsSync(path.join(output, "front-end/react/app.js")), true);
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});
+
+test("writes selected stack deployment defaults for all four combinations", () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "cdis-stack-defaults-"));
+    try {
+        fs.mkdirSync(path.join(root, "deployment", "compose"), { recursive: true });
+        fs.mkdirSync(path.join(root, "deployment", "env"), { recursive: true });
+        fs.writeFileSync(path.join(root, "deployment", "env", "production.env.example"), "PUBLIC_ORIGIN=http://localhost\n");
+        const manifest = { name: "test-template", schemaVersion: "1.0" };
+        const combinations = [
+            ["react", "express"],
+            ["vue", "express"],
+            ["react", "fastapi"],
+            ["vue", "fastapi"]
+        ];
+
+        for (const [frontend, backend] of combinations) {
+            writeProjectReadme(root, manifest, {
+                frontend: { id: frontend, path: "front-end/" + frontend },
+                backend: { id: backend, path: "back-end/" + backend }
+            }, frontend + "-" + backend + "-app");
+
+            const env = fs.readFileSync(path.join(root, "deployment", "compose", ".env"), "utf8");
+            assert.match(env, new RegExp("^FRONTEND_STACK=" + frontend + "$", "m"));
+            assert.match(env, new RegExp("^BACKEND_STACK=" + backend + "$", "m"));
+            assert.match(env, new RegExp("^FRONTEND_BUILD_CONTEXT=../../front-end/" + frontend + "$", "m"));
+            assert.match(env, new RegExp("^BACKEND_BUILD_CONTEXT=../../back-end/" + backend + "$", "m"));
+
+            const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
+            assert.ok(readme.includes("deploy.sh <frontend-image-tag> <backend-image-tag>"));
+            assert.ok(readme.includes("./scripts/e2e-up.sh") || readme.includes("CDIS_BACKEND=fastapi ./scripts/e2e-up.sh"));
+            assert.match(readme, /waits for the backend \/health endpoint/);
+            assert.match(readme, /migration and seed job/);
+            assert.match(readme, /DB_ROOT_PASSWORD/);
+            assert.equal(readme.includes("compose/compose.fastapi.yaml"), backend === "fastapi");
+
+            const productionEnv = fs.readFileSync(path.join(root, "deployment", "env", "production.env.example"), "utf8");
+            assert.match(productionEnv, new RegExp("^FRONTEND_STACK=" + frontend + "$", "m"));
+            assert.match(productionEnv, new RegExp("^BACKEND_STACK=" + backend + "$", "m"));
+        }
     } finally {
         fs.rmSync(root, { recursive: true, force: true });
     }

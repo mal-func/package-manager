@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
+import { TEMPLATE_RAW_BASE } from "../config.js";
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
@@ -43,6 +44,28 @@ function validateTechnologyOptions(options, label, expectedRoot) {
     return ids;
 }
 
+function validateTooling(tooling, frontendIds, backendIds) {
+    if (!tooling || typeof tooling !== "object" || Array.isArray(tooling)) throw new Error("Manifest 'tooling' must be an object.");
+    for (const [area, validIds] of [["frontends", frontendIds], ["backends", backendIds]]) {
+        if (tooling[area] === undefined) continue;
+        if (!tooling[area] || typeof tooling[area] !== "object" || Array.isArray(tooling[area])) throw new Error(`Manifest 'tooling.${area}' must be an object.`);
+        for (const [technologyId, capabilities] of Object.entries(tooling[area])) {
+            if (!validIds.has(technologyId)) throw new Error(`Tooling references unknown technology '${technologyId}'.`);
+            if (!capabilities || typeof capabilities !== "object" || Array.isArray(capabilities)) throw new Error(`Tooling for '${technologyId}' must be an object.`);
+            for (const [capability, config] of Object.entries(capabilities)) {
+                if (!config || typeof config !== "object" || Array.isArray(config) || !Array.isArray(config.options) || config.options.length === 0) throw new Error(`Tooling '${technologyId}.${capability}' must declare a non-empty options array.`);
+                const ids = new Set(); let defaults = 0;
+                for (const option of config.options) {
+                    if (!option || typeof option !== "object" || Array.isArray(option) || typeof option.id !== "string" || !ID_PATTERN.test(option.id)) throw new Error(`Tooling option in '${technologyId}.${capability}' must have a valid id.`);
+                    if (ids.has(option.id)) throw new Error(`Duplicate tooling option '${option.id}'.`);
+                    ids.add(option.id); if (option.default === true) defaults += 1;
+                    if (option.default !== undefined && typeof option.default !== "boolean") throw new Error(`Tooling option '${option.id}' default must be a boolean.`);
+                }
+                if (defaults !== 1) throw new Error(`Tooling '${technologyId}.${capability}' must declare exactly one default option.`);
+            }
+        }
+    }
+}
 export function validateManifest(manifest) {
     if (!manifest || typeof manifest !== "object" || Array.isArray(manifest) ||
         !manifest.name || !manifest.schemaVersion) {
@@ -85,6 +108,7 @@ export function validateManifest(manifest) {
     if (hasFrontends) {
         const frontendIds = validateTechnologyOptions(manifest.frontends, "frontends", "front-end");
         const backendIds = validateTechnologyOptions(manifest.backends, "backends", "back-end");
+        if (manifest.tooling !== undefined) validateTooling(manifest.tooling, frontendIds, backendIds);
 
         if (manifest.compatibility !== undefined) {
             const compatibility = manifest.compatibility;
@@ -131,8 +155,8 @@ export function readManifest(templateDirectory) {
 }
 
 export async function fetchTemplateManifest(version) {
-    const manifestUrl =
-        `https://raw.githubusercontent.com/mal-func/cdis-template-edit/${version}/cdis-template.json`;
+    const encodedRef = version.split("/").map(encodeURIComponent).join("/");
+    const manifestUrl = `${TEMPLATE_RAW_BASE}/${encodedRef}/cdis-template.json`;
     try {
         const response = await axios.get(manifestUrl);
         return validateManifest(response.data);
