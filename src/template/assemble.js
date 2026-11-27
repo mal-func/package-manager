@@ -28,20 +28,53 @@ function copyDirectory(sourceRoot, relativeSource, destination, excluded) {
 export function writeProjectReadme(destination, manifest, selection, projectName) {
     const frontendReadme = `${selection.frontend.path}/README.md`;
     const backendReadme = `${selection.backend.path}/README.md`;
+    const frontend = selection.frontend.id;
+    const backend = selection.backend.id;
+    const composeDirectory = path.join(destination, "deployment", "compose");
+    if (fs.existsSync(composeDirectory)) {
+        const frontendContext = `../../${selection.frontend.path}`;
+        const backendContext = `../../${selection.backend.path}`;
+        const stackEnvironment = [
+            `FRONTEND_STACK=${frontend}`,
+            `BACKEND_STACK=${backend}`,
+            `FRONTEND_BUILD_CONTEXT=${frontendContext}`,
+            `BACKEND_BUILD_CONTEXT=${backendContext}`,
+            ""
+        ].join("\n");
+        fs.writeFileSync(path.join(composeDirectory, ".env"), stackEnvironment);
+    }
+    const composeFiles = backend === "fastapi"
+        ? "-f compose/compose.yaml -f compose/compose.fastapi.yaml"
+        : "-f compose/compose.yaml";
     const lines = [
         `# ${projectName || "CDIS project"}`,
         "",
         "Generated with the CDIS project manager.",
         "",
         "## Selected stack",
-        `- Frontend: **${selection.frontend.id}** — ${selection.frontend.path}/`,
-        `- Backend: **${selection.backend.id}** — ${selection.backend.path}/`,
+        `- Frontend: **${frontend}** — ${selection.frontend.path}/`,
+        `- Backend: **${backend}** — ${selection.backend.path}/`,
         "",
         "## Getting started",
         `- Frontend guide: [${frontendReadme}](${frontendReadme})`,
         `- Backend guide: [${backendReadme}](${backendReadme})`,
         "- Deployment guide: [deployment/README.md](deployment/README.md)",
         "- Project documentation: [docs/](docs/)",
+        "",
+        "## Deployment defaults for this generated stack",
+        "The CLI has created `deployment/compose/.env` with the selected stack and local Docker build contexts. Compose reads this file automatically when run from the deployment directory.",
+        "",
+        "From the project root, start the local stack with:",
+        "",
+        "```bash",
+        `cd deployment && docker compose ${composeFiles} up -d --build`,
+        "```",
+        "",
+        "For production, configure `deployment/compose/.env.production` using `deployment/env/production.env.example`, then deploy with the selected stack explicitly:",
+        "",
+        "```bash",
+        `cd deployment && ./scripts/deploy.sh <frontend-image-tag> <backend-image-tag> ${frontend} ${backend}`,
+        "```",
         "",
         `Generated from ${manifest.name} (schema ${manifest.schemaVersion}).`,
         ""
