@@ -54,6 +54,9 @@ export function writeProjectReadme(destination, manifest, selection, projectName
         fs.writeFileSync(productionEnvExample, lines.join("\n").replace(/\n*$/, "") + "\n");
     }
 
+    const startupCommand = backend === "fastapi"
+        ? "CDIS_BACKEND=fastapi ./scripts/e2e-up.sh"
+        : "./scripts/e2e-up.sh";
     const composeFiles = backend === "fastapi"
         ? "-f compose/compose.yaml -f compose/compose.fastapi.yaml"
         : "-f compose/compose.yaml";
@@ -72,15 +75,26 @@ export function writeProjectReadme(destination, manifest, selection, projectName
         "- Deployment guide: [deployment/README.md](deployment/README.md)",
         "- Project documentation: [docs/](docs/)",
         "",
-        "## Deployment defaults for this generated stack",
-        "The CLI creates `deployment/compose/.env` with the selected stack and local Docker build contexts. Pass it explicitly with `--env-file compose/.env` when running Compose from the deployment directory.",
+        "## Local Docker startup",
+        "The CLI creates deployment/compose/.env with the selected stack and build contexts. Keep those lines when adding the local secrets below.",
         "",
-        "From the project root, start the local stack with:",
+        "1. Open deployment/compose/.env and add the required local values from deployment/env/production.env.example: PUBLIC_ORIGIN, DB_PASSWORD, DB_ROOT_PASSWORD, and JWT_ACCESS_SECRET. Do not replace the existing FRONTEND_BUILD_CONTEXT or BACKEND_BUILD_CONTEXT lines.",
+        "2. From the deployment/ directory, run the startup script for the selected backend:",
         "",
         "```bash",
-        "cd deployment && docker compose --env-file compose/.env " + composeFiles + " up -d --build",
+        "cd deployment",
+        startupCommand,
         "```",
         "",
+        "The script builds and starts the selected stack, waits for the backend /health endpoint, then runs the database migration and seed job. Open http://localhost:8080 when it finishes.",
+        "",
+        "On Windows, run these commands in WSL or Git Bash with Docker Desktop WSL integration enabled. The script requires Bash and curl.",
+        "",
+        "To stop the stack, run docker compose " + composeFiles + " down from deployment/.",
+        "",
+        "## Optional formatting",
+        "If you selected Prettier, install JavaScript dependencies in each affected project and run npm run format once to format the generated source. The format:check script can then verify formatting in CI.",
+        ""
         "For production, copy `deployment/env/production.env.example` to `deployment/compose/.env.production` and fill in real secrets and image names. Selected stack defaults are recorded; optional third and fourth deploy.sh arguments override them:",
         "",
         "```bash",
