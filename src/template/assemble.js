@@ -94,7 +94,8 @@ export function writeProjectReadme(destination, manifest, selection, projectName
         "",
         "## Optional formatting",
         "If you selected Prettier, install JavaScript dependencies in each affected project and run npm run format once to format the generated source. The format:check script can then verify formatting in CI.",
-        ""
+        "",
+        "## Production deployment",
         "For production, copy `deployment/env/production.env.example` to `deployment/compose/.env.production` and fill in real secrets and image names. Selected stack defaults are recorded; optional third and fourth deploy.sh arguments override them:",
         "",
         "```bash",
